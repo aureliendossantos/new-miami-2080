@@ -2,12 +2,17 @@ pico-8 cartridge // http://www.pico-8.com
 version 22
 __lua__
 function _init()
- --delai btnp
+ refresh()
+end
+
+function refresh()
+	--delai btnp
  poke(0x5f5c, 4)
  --state
  _upd=update_shmup
  _drw=draw_shmup
  
+ ❎_released=false
  t=0
  
  bullets={}
@@ -15,7 +20,15 @@ function _init()
  enemies={}
  explosions={}
  init_player()
- spawn_enemies(5)
+end
+
+function update_gameover()
+ if not btn(❎) then
+  ❎_released = true
+ end
+ if ❎_released and btn(❎) then
+ 	_init()
+ end
 end
 
 function update_shmup()
@@ -24,10 +37,20 @@ function update_shmup()
 	update_enemies()
 	update_bullets()
 	update_explosions()
+	
+	if #enemies==0 then
+	 spawn_enemies(3+flr(rnd(3)))
+	end
 end
 
 function _update60()
  _upd()
+end
+
+function draw_gameover()
+ cls()
+ print("game over",20,40,8)
+ print("press ❎ to continue",20,50,9)
 end
 
 function draw_shmup()
@@ -46,8 +69,12 @@ function draw_shmup()
 		spr(4,b.x,b.y)
 	end
 	for i=1,p.life do
-		spr(5,i*8,1)
+		--spr(5,i*8,1)
 	end
+	
+	print(a,1,1)
+	print(p.x,1,8)
+	print(p.y,1,16)
 end
 
 function _draw()
@@ -59,7 +86,8 @@ function update_bullets()
 		b.y-=b.speed
 	end
 	for b in all(e_bullets) do
-		b.y+=b.speed
+		b.y+=b.dy
+		b.x+=b.dx
 	end
 end
 
@@ -130,10 +158,15 @@ function update_enemies()
 end
 
 function enemy_shoot(x,y)
+	local duree=60
+	a=angle_to(x,y,p.x,p.y)
+ 
 	add(e_bullets,{
 	 x=x,
 	 y=y,
-	 speed=2})
+	 dx=cos(a),
+  dy=-sin(a)
+	})
 end
 -->8
 --tools
@@ -141,6 +174,10 @@ end
 function animate(ani)
   return ani[flr(t/8)%#ani+1]
   --8 : vitesse
+end
+
+function angle_to(x1,y1,x2,y2)
+ return atan2(y2-y1,x2-x1)+0.25
 end
 
 function elastic_in_out(t,b,c,d)
@@ -187,6 +224,10 @@ function update_player()
 			del(e_bullets,b)
 			sfx(1)
 		end
+	end
+	if p.life<=0 then
+	 _upd=update_gameover
+  _drw=draw_gameover
 	end
 	if p.invincible and p.t<60 then
 	 p.t+=1
