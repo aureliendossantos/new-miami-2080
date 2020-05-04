@@ -15,13 +15,9 @@ function _init()
  
  ❎_released=false
  t=0
- menu_index=0
+ menu_index=1
+ choice=1
  
- bullets={}
- e_bullets={}
- enemies={}
- explosions={}
- init_player()
 end
 
 --scene shop
@@ -31,37 +27,88 @@ function update_shop()
   "<weapon"..eqp[2]..">",
   "deploy"
  }
- if (btnp(⬆️)) menu_index-=1
- if (btnp(⬇️)) menu_index+=1
+ if btnp(⬆️) then
+  menu_index=max(1,menu_index-1)
+ end
+ if btnp(⬇️) then
+  menu_index=min(3,menu_index+1)
+ end
  for i=1,2 do
-  if menu_index%3==i-1 then
-   if btnp(➡️) then
-    eqp[i] = min(2,eqp[i]+1)
-   end
+  if menu_index==i then
    if btnp(⬅️) then
-    eqp[i] = max(1,eqp[i]-1)
+    choice = max(1,choice-1)
+   end
+   if btnp(➡️) then
+    choice = min(2,choice+1)
    end
   end
  end
- if btn(❎) and menu_index%3==2 then
-  _upd=update_shmup
-  _drw=draw_shmup
+ if btnp(❎) then
+  for i=1,2 do
+   if menu_index==i then
+    eqp[i]=choice
+    sfx(1)
+   end
+  end
+  if menu_index==3 then
+	  init_shmup()
+	  _upd=update_shmup
+	  _drw=draw_shmup
+	 end
  end
 end
 
 function draw_shop()
  cls(1)
- for i=1,3 do
-  if menu_index%3+1==i then
-   rectfill(19,29+i*10,56,35+i*10,2)
-	  print(shop_entry[i],20,30+i*10,9)
-	 else
-	  print(shop_entry[i],20,30+i*10,15)
-	 end
-	end
+ --big square
+ rectfill(10,18,118,110,9)
+ rectfill(11,19,117,109,1)
+ --deploy
+ rectfill(44,90,83,104,9)
+ if menu_index==3 then
+  print("deploy",52,95,1)
+ else
+  rectfill(45,91,82,103,2)
+  print("deploy",52,95,9)
+ end
+ --ships
+ draw_items(ship,1,36)
+ draw_items(weapon,2,54)
+end
+
+function draw_items(array,eqp_slot,y)
+ for i,c in pairs(array) do
+  local x=19+14*(i-1)
+  draw_item(x,y,3)
+  if menu_index==eqp_slot and 
+  choice==i then
+   draw_item(x,y,11)
+  end
+  if eqp[eqp_slot]==i then
+   draw_item(x,y,9)
+  end
+  if menu_index==eqp_slot and 
+  choice==i and
+  eqp[eqp_slot]==i then
+   draw_item(x,y,10)
+  end
+  spr(c.anim[1],x+2,y+2)
+ end
+end
+
+function draw_item(x,y,col)
+ rectfill(x,y,x+12,y+15,col)
 end
 
 --scene shmup
+function init_shmup()
+ bullets={}
+ e_bullets={}
+ enemies={}
+ explosions={}
+ init_player()
+end
+
 function update_shmup()
  t+=1
 	update_player()
@@ -281,6 +328,7 @@ function init_database()
   {
    speed=1.5,
    life=4,
+   price=2000,
    anim={32}
   }
  }
@@ -325,8 +373,8 @@ function update_explosions()
  end
 end
 __gfx__
-00000000006006000000000000000000000ee0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-000000000060060000900900000bbb0000ecce0000000000000ccc00000000000000000000000000000000000000000000000000000000000000000000000000
+000000000060060000a00a0000000000000ee0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000000000060060000a00a00000bbb0000ecce0000000000000ccc00000000000000000000000000000000000000000000000000000000000000000000000000
 00700700006006000090090000bbbbb00ecddce0008080000cccccc0000000000000000000000000000000000000000000000000000000000000000000000000
 0007700006dc7d60009009000bb0b0bbecddddce08888800ccc0c0cc000000000000000000000000000000000000000000000000000000000000000000000000
 0007700006dccd60009009000bbbbbbbecddddce08888800cccccccc000000000000000000000000000000000000000000000000000000000000000000000000
