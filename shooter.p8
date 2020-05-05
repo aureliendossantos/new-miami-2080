@@ -5,8 +5,6 @@ __lua__
 --nev / foxfiesta
 
 function _init()
- --delai btnp
- poke(0x5f5c, 4)
  --state
  _upd=update_shop
  _drw=draw_shop
@@ -31,9 +29,9 @@ function update_shop()
   menu_index=max(1,menu_index-1)
  end
  if btnp(⬇️) then
-  menu_index=min(3,menu_index+1)
+  menu_index=min(4,menu_index+1)
  end
- for i=1,2 do
+ for i=1,3 do
   if menu_index==i then
    if btnp(⬅️) then
     choice = max(1,choice-1)
@@ -44,13 +42,13 @@ function update_shop()
   end
  end
  if btnp(❎) then
-  for i=1,2 do
+  for i=1,3 do
    if menu_index==i then
     eqp[i]=choice
     sfx(1)
    end
   end
-  if menu_index==3 then
+  if menu_index==4 then
 	  init_shmup()
 	  _upd=update_shmup
 	  _drw=draw_shmup
@@ -65,7 +63,7 @@ function draw_shop()
  rectfill(11,19,117,109,1)
  --deploy
  rectfill(44,90,83,104,9)
- if menu_index==3 then
+ if menu_index==4 then
   print("deploy",52,95,1)
  else
   rectfill(45,91,82,103,2)
@@ -74,6 +72,7 @@ function draw_shop()
  --ships
  draw_items(ship,1,36)
  draw_items(weapon,2,54)
+ draw_items(secondary,3,72)
 end
 
 function draw_items(array,eqp_slot,y)
@@ -127,7 +126,7 @@ function draw_shmup()
 		spr(3,e.x,e.y)
 	end
 	for b in all(bullets) do
-		spr(animate(weapon[eqp[2]].anim),b.x,b.y)
+		spr(animate(b.anim),b.x,b.y)
 	end
 	for e in all(explosions) do
 		circ(e.x,e.y,e.t/2,8+e.t%3)
@@ -174,7 +173,7 @@ function spawn_enemies(n)
 	  x=15+8*(i-1)+gap*(i-1),
 	  y=-8,
 	  speed=0.5,
-	  life=4,
+	  life=400,
 	  move_t=0,
 	  shoot_t=0
 	 })
@@ -190,7 +189,7 @@ function update_enemies()
  	--collision
  	for b in all(bullets) do
  		if collision(e,b) then
- 		 e.life-=1
+ 		 e.life-=b.damage
  		 explode(b.x+4,b.y)
  			del(bullets,b)
  			sfx(1)
@@ -263,8 +262,12 @@ function init_player()
   y=80,
   speed=ship[eqp[1]].speed,
   life=ship[eqp[1]].life,
-  t=0,
   invincible=false,
+  inv_t=0,
+  wep1_t=0,
+  wep1_t_max=weapon[eqp[2]].frequency,
+  wep2_t=0,
+  wep2_t_max=secondary[eqp[3]].frequency,
   anim=ship[eqp[1]].anim
  }
 end
@@ -274,7 +277,19 @@ function update_player()
 	if (btn(➡️)) p.x+=p.speed
 	if (btn(⬆️)) p.y-=p.speed
 	if (btn(⬇️)) p.y+=p.speed
-	if (btnp(❎)) shoot()
+	--weapon1
+	p.wep1_t+=1
+	if btn(❎) and p.wep1_t>=p.wep1_t_max then
+	 shoot(weapon[eqp[2]])
+	 p.wep1_t=0
+	end
+	--weapon2
+	p.wep2_t+=1
+	if btn(🅾️) and p.wep2_t>=p.wep2_t_max then
+	 shoot(secondary[eqp[3]])
+	 p.wep2_t=0
+	end
+	--collision
 	for b in all(e_bullets) do
 		if collision(b,p) and
 		 not p.invincible then
@@ -289,27 +304,18 @@ function update_player()
 	 _upd=update_gameover
   _drw=draw_gameover
 	end
-	if p.invincible and p.t<60 then
-	 p.t+=1
+	if p.invincible and p.inv_t<60 then
+	 p.inv_t+=1
 	else
-	 p.t=0
+	 p.inv_t=0
 	 p.invincible=false
 	end
 end
 
 function draw_player()
- if p.t%3==0 then
+ if p.inv_t%3==0 then
  	spr(animate(p.anim),p.x,p.y)
  end
-end
-
-function shoot()
- add(bullets,{
-  x=p.x,
-  y=p.y,
-  speed=weapon[eqp[2]].speed
- })
- sfx(weapon[eqp[2]].sfx)
 end
 -->8
 --database
@@ -317,7 +323,7 @@ end
 function init_database()
  --equipment chosen
  --ship number, weapon number
- eqp={1,1}
+ eqp={1,1,1}
 	--ships
 	ship={
 	 {
@@ -336,26 +342,66 @@ function init_database()
  weapon={
   {
    speed=4,
+   frequency=8,
+   duration=35,
+   damage=100,
    sfx=0,
    anim={2}
   },
   {
    speed=6,
+   frequency=12,
+   duration=15,
+   damage=160,
    sfx=2,
    anim={5}
+  }
+ }
+ --secondary
+ secondary={
+  {
+   speed=4,
+   frequency=8,
+   duration=35,
+   damage=200,
+   sfx=0,
+   anim={7}
+  },
+  {
+   speed=3,
+   frequency=6,
+   duration=15,
+   damage=300,
+   sfx=2,
+   anim={7}
   }
  }
 end
 -->8
 --bullets + explosions
 
+function shoot(bullet)
+ add(bullets,{
+  x=p.x,
+  y=p.y,
+  speed=bullet.speed,
+  duration=bullet.duration,
+  damage=bullet.damage,
+  anim=bullet.anim
+ })
+ sfx(bullet.sfx)
+end
+
 function update_bullets()
 	for b in all(bullets) do
 		b.y-=b.speed
+		b.duration-=1
+		if (b.duration==0) del(bullets,b)
 	end
 	for b in all(e_bullets) do
 		b.y+=b.dy
 		b.x+=b.dx
+		if (b.y>130) del(e_bullets,b)
 	end
 end
 
@@ -374,12 +420,12 @@ function update_explosions()
 end
 __gfx__
 000000000060060000a00a0000000000000ee0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-000000000060060000a00a00000bbb0000ecce0000000000000ccc00000000000000000000000000000000000000000000000000000000000000000000000000
-00700700006006000090090000bbbbb00ecddce0008080000cccccc0000000000000000000000000000000000000000000000000000000000000000000000000
-0007700006dc7d60009009000bb0b0bbecddddce08888800ccc0c0cc000000000000000000000000000000000000000000000000000000000000000000000000
-0007700006dccd60009009000bbbbbbbecddddce08888800cccccccc000000000000000000000000000000000000000000000000000000000000000000000000
-00700700d66dd66d000000000bbbbbbb0ecddce0008880000ccccccc000000000000000000000000000000000000000000000000000000000000000000000000
-00000000d666666d0000000000b0b0b000ecce000008000000c0cc00000000000000000000000000000000000000000000000000000000000000000000000000
+000000000060060000a00a00000bbb0000ecce0000000000000ccc00000880000000000000000000000000000000000000000000000000000000000000000000
+00700700006006000090090000bbbbb00ecddce0008080000cccccc0008998000000000000000000000000000000000000000000000000000000000000000000
+0007700006dc7d60009009000bb0b0bbecddddce08888800ccc0c0cc089aa9800000000000000000000000000000000000000000000000000000000000000000
+0007700006dccd60009009000bbbbbbbecddddce08888800cccccccc088888800000000000000000000000000000000000000000000000000000000000000000
+00700700d66dd66d000000000bbbbbbb0ecddce0008880000ccccccc088888800000000000000000000000000000000000000000000000000000000000000000
+00000000d666666d0000000000b0b0b000ecce000008000000c0cc00008080000000000000000000000000000000000000000000000000000000000000000000
 00000000050dd0500000000000000000000ee0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00600600006006000060060000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00600600006006000060060000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
