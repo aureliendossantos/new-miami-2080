@@ -292,10 +292,22 @@ function init_player()
 end
 
 function update_player()
- if (btn(⬅️)) p.x-=p.speed
-	if (btn(➡️)) p.x+=p.speed
-	if (btn(⬆️)) p.y-=p.speed
-	if (btn(⬇️)) p.y+=p.speed
+ --movement
+ local ix,iy=0,0
+ if (btn(⬅️)) ix-=1
+	if (btn(➡️)) ix+=1
+	if (btn(⬆️)) iy-=1
+	if (btn(⬇️)) iy+=1
+	
+	if ix~=0 and iy~=0 then
+	 ix*=0.9
+	 iy*=0.9
+	else
+	 p.x,p.y=flr(p.x),flr(p.y)
+	end
+	
+	p.x+=ix*p.speed
+	p.y+=iy*p.speed
 	--weapon1
 	p.wep1_t+=1
 	if btn(❎) and p.wep1_t>=p.wep1_t_max then
