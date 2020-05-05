@@ -1,5 +1,5 @@
 pico-8 cartridge // http://www.pico-8.com
-version 23
+version 24
 __lua__
 --miami 2080
 --nev / foxfiesta
@@ -12,6 +12,7 @@ function _init()
  init_database()
  
  ❎_released=false
+ offset=0
  t=0
  menu_index=1
  choice=1
@@ -134,6 +135,7 @@ end
 
 function update_shmup()
  t+=1
+ screen_shake()
 	update_player()
 	update_enemies()
 	update_bullets()
@@ -277,8 +279,8 @@ end
 function init_player()
 	p={x=60,
   y=80,
-  x1=3,y1=3,
-  w=2,h=2,
+  x1=7,y1=11,
+  w=1,h=2,
   speed=ship[eqp[1]].speed,
   life=ship[eqp[1]].life,
   invincible=false,
@@ -311,7 +313,8 @@ function update_player()
 	--weapon1
 	p.wep1_t+=1
 	if btn(❎) and p.wep1_t>=p.wep1_t_max then
-	 shoot(weapon[eqp[2]])
+	 shoot(weapon[eqp[2]],-2)
+	 shoot(weapon[eqp[2]],10)
 	 p.wep1_t=0
 	end
 	--weapon2
@@ -328,6 +331,7 @@ function update_player()
 			p.invincible=true
 			explode(b.x+4,b.y+8)
 			del(e_bullets,b)
+			offset=0.15
 			sfx(1)
 		end
 	end
@@ -416,14 +420,14 @@ end
 -->8
 --bullets + explosions
 
-function shoot(bullet)
+function shoot(bullet,x)
  local b={}
  --recopier la table originelle
- for j,x in pairs(bullet) do
-  b[j] = x
+ for j,k in pairs(bullet) do
+  b[j] = k
  end
- b.x=p.x
- b.y=p.y
+ b.x=p.x+x
+ b.y=p.y+2
  add(bullets,b)
  sfx(bullet.sfx)
 end
@@ -464,6 +468,20 @@ end
 
 function angle_to(x1,y1,x2,y2)
  return atan2(y2-y1,x2-x1)+0.25
+end
+
+function screen_shake()
+ local fade = 0.95
+ local offset_x=16-rnd(32)
+ local offset_y=16-rnd(32)
+ offset_x*=offset
+ offset_y*=offset
+ 
+ camera(offset_x,offset_y)
+ offset*=fade
+ if offset<0.05 then
+  offset=0
+ end
 end
 
 function collision(a,b)
