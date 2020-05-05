@@ -245,7 +245,7 @@ function init_database()
    end,
    
    pattern=function (e)
-    local a = angle_to(e.x,e.y,p.x,p.y)
+    local a = angle_to(e.x,e.y,p.x+p.x1-2,p.y+p.y1-2)
     enemy_shoot(e.x,e.y,a,1.6)
    end
   },
@@ -279,7 +279,7 @@ end
 function init_player()
 	p={x=60,
   y=80,
-  x1=7,y1=11,
+  x1=7,y1=9,
   w=1,h=2,
   speed=ship[eqp[1]].speed,
   life=ship[eqp[1]].life,
@@ -300,27 +300,26 @@ function update_player()
 	if (btn(➡️)) ix+=1
 	if (btn(⬆️)) iy-=1
 	if (btn(⬇️)) iy+=1
-	
 	if ix~=0 and iy~=0 then
 	 ix*=0.9
 	 iy*=0.9
 	else
 	 p.x,p.y=flr(p.x),flr(p.y)
 	end
-	
-	p.x+=ix*p.speed
-	p.y+=iy*p.speed
+	--avance sans bords de l'ecran
+	p.x=mid(-6,p.x+ix*p.speed,118)
+	p.y=mid(-8,p.y+iy*p.speed,115)
 	--weapon1
 	p.wep1_t+=1
 	if btn(❎) and p.wep1_t>=p.wep1_t_max then
-	 shoot(weapon[eqp[2]],-2)
-	 shoot(weapon[eqp[2]],10)
+	 shoot(weapon[eqp[2]],-2,2)
+	 shoot(weapon[eqp[2]],10,2)
 	 p.wep1_t=0
 	end
 	--weapon2
 	p.wep2_t+=1
 	if btn(🅾️) and p.wep2_t>=p.wep2_t_max then
-	 shoot(secondary[eqp[3]])
+	 shoot(secondary[eqp[3]],4,-2)
 	 p.wep2_t=0
 	end
 	--collision
@@ -420,14 +419,14 @@ end
 -->8
 --bullets + explosions
 
-function shoot(bullet,x)
+function shoot(bullet,x,y)
  local b={}
  --recopier la table originelle
  for j,k in pairs(bullet) do
   b[j] = k
  end
  b.x=p.x+x
- b.y=p.y+2
+ b.y=p.y+y
  add(bullets,b)
  sfx(bullet.sfx)
 end
