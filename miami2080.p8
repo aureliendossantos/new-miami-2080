@@ -16,15 +16,38 @@ function _init()
  menu_index=1
  choice=1
  
+ --temp angle
+ a=0
 end
 
+--scene gameover
+function update_gameover()
+ if not btn(❎) then
+  ❎_released = true
+ end
+ if ❎_released and btn(❎) then
+ 	_init()
+ end
+end
+
+function draw_gameover()
+ cls()
+ print("game over",20,40,8)
+ print("press ❎ to continue",20,50,9)
+end
+
+--core functions
+function _update60()
+ _upd()
+end
+
+function _draw()
+ _drw()
+end
+
+-->8
 --scene shop
 function update_shop()
- shop_entry={
-  "<ship"..eqp[1]..">",
-  "<weapon"..eqp[2]..">",
-  "deploy"
- }
  if btnp(⬆️) then
   menu_index=max(1,menu_index-1)
  end
@@ -99,6 +122,7 @@ function draw_item(x,y,col)
  rectfill(x,y,x+12,y+15,col)
 end
 
+-->8
 --scene shmup
 function init_shmup()
  bullets={}
@@ -115,7 +139,8 @@ function update_shmup()
 	update_bullets()
 	update_explosions()
 	if #enemies==0 then
-	 spawn_enemies(3+flr(rnd(3)))
+	 spawn_enemies(3+flr(rnd(3)),enemy[flr(rnd(2))+1])
+	 --spawn_enemies(2,enemy[2])
 	end
 end
 
@@ -123,7 +148,7 @@ function draw_shmup()
 	cls()
 	draw_player()
 	for e in all(enemies) do
-		spr(3,e.x,e.y)
+		spr(animate(e.anim),e.x,e.y)
 	end
 	for b in all(bullets) do
 		spr(animate(b.anim),b.x,b.y)
@@ -138,121 +163,113 @@ function draw_shmup()
 		spr(5,i*8,1)
 	end
 end
-
---scene gameover
-function update_gameover()
- if not btn(❎) then
-  ❎_released = true
- end
- if ❎_released and btn(❎) then
- 	_init()
- end
-end
-
-function draw_gameover()
- cls()
- print("game over",20,40,8)
- print("press ❎ to continue",20,50,9)
-end
-
---core functions
-function _update60()
- _upd()
-end
-
-function _draw()
- _drw()
-end
 -->8
---enemies
+--database
 
-function spawn_enemies(n)
- gap=(98-n*8)/(n-1)
- for i=1,n do
- 	add(enemies,{
-	  x=15+8*(i-1)+gap*(i-1),
-	  y=-8,
-	  speed=0.5,
+function init_database()
+ --equipment chosen
+ --ship, weapon, secondary
+ eqp={1,1,1}
+	--ships
+	ship={
+	 {
+	  speed=1,
+   life=3,
+   anim={16,17,18}
+  },
+  {
+   speed=1.5,
+   life=4,
+   price=2000,
+   anim={32}
+  }
+ }
+ --weapons
+ weapon={
+  {
+   speed=4,
+   frequency=8,
+   duration=35,
+   damage=100,
+   sfx=0,
+   anim={2},
+   x1=2,y1=0,
+   w=3,h=4
+  },
+  {
+   speed=6,
+   frequency=12,
+   duration=15,
+   damage=160,
+   sfx=2,
+   anim={5},
+   x1=1,y1=2,
+   w=4,h=4
+  }
+ }
+ --secondary
+ secondary={
+  {
+   speed=4,
+   frequency=8,
+   duration=35,
+   damage=200,
+   sfx=0,
+   anim={7},
+   x1=1,y1=2,
+   w=4,h=4
+  },
+  {
+   speed=3,
+   frequency=6,
+   duration=15,
+   damage=300,
+   sfx=2,
+   anim={7},
+   x1=1,y1=2,
+   w=4,h=4
+  }
+ }
+ --enemies
+ enemy={
+  {
+   --little guy
 	  life=400,
-	  move_t=0,
-	  shoot_t=0
-	 })
- end
-end
-
-function update_enemies()
- for e in all(enemies) do
-  --avance
- 	--if (e.y<30) e.y+=e.speed
- 	if (e.move_t<60) e.move_t+=1
- 	e.y=elastic_in_out(e.move_t,-10,30,60)
- 	--collision
- 	for b in all(bullets) do
- 		if collision(e,b) then
- 		 e.life-=b.damage
- 		 explode(b.x+4,b.y)
- 			del(bullets,b)
- 			sfx(1)
-			end
-		end
-		--mort
-		if e.life<=0 then
-			del(enemies,e)
-		end
-		--tir
-		if e.shoot_t==60 then
-		 enemy_shoot(e.x,e.y)
-		 e.shoot_t=0
-		else
-		 e.shoot_t+=1
-		end
- end
-end
-
-function enemy_shoot(x,y)
-	local duree=60
-	a=angle_to(x,y,p.x,p.y)
- 
-	add(e_bullets,{
-	 x=x,
-	 y=y,
-	 dx=cos(a),
-  dy=-sin(a)
-	})
-end
--->8
---tools
-
-function animate(ani)
-  return ani[flr(t/8)%#ani+1]
-  --8 : vitesse
-end
-
-function angle_to(x1,y1,x2,y2)
- return atan2(y2-y1,x2-x1)+0.25
-end
-
-function collision(a,b)
- return not (a.x>b.x+8 
-          or a.y>b.y+8 
-          or a.x+8<b.x 
-          or a.y+8<b.y)
-end
-
-function elastic_in_out(t,b,c,d)
- t/=d
- local ts = t * t
- local tc = ts*t
- if t<0.3 then
-  return b+c*(56*tc*ts + -105*ts*ts + 60*tc + -10*ts + 0*t)
- elseif t>0.7 then
-  return b+c*(56*tc*ts + -175*ts*ts + 200*tc + -100*ts + 20*t)
- else
-  lt=(t-0.3)/0.4   
-  lc=0.98884*c       
-  lb=b+lc*(0.00558)
-  return lc * lt + lb
- end
+	  frequency=40,
+   anim={3},
+   movement=function (e)
+    if (e.move_t<60) e.move_t+=1
+ 	  e.y=elastic_in_out(e.move_t,-10,30,60)
+   end,
+   
+   pattern=function (e)
+    local a = angle_to(e.x,e.y,p.x,p.y)
+    enemy_shoot(e.x,e.y,a,1.6)
+   end
+  },
+  {
+   --medium guy
+	  life=800,
+	  frequency=4,
+   anim={6},
+   movement=function (e)
+    if (e.move_t<60) e.move_t+=1
+ 	  e.y=elastic_in_out(e.move_t,-10,30,60)
+   end,
+   
+   base=0.25,
+   
+   pattern=function (e)
+    e.pattern_t+=0.1
+    --e.base+=0.001
+    if flr(e.pattern_t)%3~=0 then
+     local var=0.06+sin(e.pattern_t)/50
+     enemy_shoot(e.x,e.y,e.base+var,1.5)
+     enemy_shoot(e.x,e.y,e.base-var,1.5)
+    end
+   end
+  }
+ }
 end
 -->8
 --player
@@ -260,6 +277,8 @@ end
 function init_player()
 	p={x=60,
   y=80,
+  x1=3,y1=3,
+  w=2,h=2,
   speed=ship[eqp[1]].speed,
   life=ship[eqp[1]].life,
   invincible=false,
@@ -267,7 +286,7 @@ function init_player()
   wep1_t=0,
   wep1_t_max=weapon[eqp[2]].frequency,
   wep2_t=0,
-  wep2_t_max=secondary[eqp[3]].frequency,
+  wep2_t_max=secondary[eqp[3]].frequency,  
   anim=ship[eqp[1]].anim
  }
 end
@@ -318,77 +337,82 @@ function draw_player()
  end
 end
 -->8
---database
+--enemies
 
-function init_database()
- --equipment chosen
- --ship number, weapon number
- eqp={1,1,1}
-	--ships
-	ship={
-	 {
-	  speed=1,
-   life=3,
-   anim={16,17,18}
-  },
-  {
-   speed=1.5,
-   life=4,
-   price=2000,
-   anim={32}
-  }
- }
- --weapons
- weapon={
-  {
-   speed=4,
-   frequency=8,
-   duration=35,
-   damage=100,
-   sfx=0,
-   anim={2}
-  },
-  {
-   speed=6,
-   frequency=12,
-   duration=15,
-   damage=160,
-   sfx=2,
-   anim={5}
-  }
- }
- --secondary
- secondary={
-  {
-   speed=4,
-   frequency=8,
-   duration=35,
-   damage=200,
-   sfx=0,
-   anim={7}
-  },
-  {
-   speed=3,
-   frequency=6,
-   duration=15,
-   damage=300,
-   sfx=2,
-   anim={7}
-  }
- }
+function spawn_enemies(n,type)
+ gap=(98-n*8)/(n-1)
+ for i=1,n do
+ 	add(enemies,{
+	  x=15+8*(i-1)+gap*(i-1),
+	  y=-8,
+	  x1=0,y1=0,
+	  w=7,h=7,
+	  life=type.life,
+	  move_t=0,
+	  shoot_t=0,
+	  shoot_t_max=type.frequency,
+	  a=type.a,
+	  anim=type.anim,
+	  movement=type.movement,
+	  pattern=type.pattern,
+	  pattern_t=0,
+	  base=type.base
+	 })
+ end
+end
+
+function update_enemies()
+ for e in all(enemies) do
+  --avance
+ 	e.movement(e)
+	 --collision
+ 	for b in all(bullets) do
+ 		if collision(e,b) then
+ 		 e.life-=b.damage
+ 		 explode(b.x+4,b.y)
+ 			del(bullets,b)
+ 			sfx(1)
+			end
+		end
+		--mort
+		if e.life<=0 then
+			del(enemies,e)
+		end
+		--tir
+		if e.shoot_t==e.shoot_t_max then
+		 e.pattern(e)
+		 e.shoot_t=0
+		else
+		 e.shoot_t+=1
+		end
+ end
+end
+
+function enemy_shoot(x,y,a,spd)
+	add(e_bullets,{
+	 x=x,
+	 y=y,
+	 dx=cos(a),
+  dy=-sin(a),
+  speed=spd,
+  x1=3,
+  y1=3,
+  w=2,
+  h=2
+	})
 end
 -->8
 --bullets + explosions
 
 function shoot(bullet)
- add(bullets,{
-  x=p.x,
-  y=p.y,
-  speed=bullet.speed,
-  duration=bullet.duration,
-  damage=bullet.damage,
-  anim=bullet.anim
- })
+ local b={}
+ --recopier la table originelle
+ for j,x in pairs(bullet) do
+  b[j] = x
+ end
+ b.x=p.x
+ b.y=p.y
+ add(bullets,b)
  sfx(bullet.sfx)
 end
 
@@ -399,8 +423,8 @@ function update_bullets()
 		if (b.duration==0) del(bullets,b)
 	end
 	for b in all(e_bullets) do
-		b.y+=b.dy
-		b.x+=b.dx
+		b.y+=b.dy*b.speed
+		b.x+=b.dx*b.speed
 		if (b.y>130) del(e_bullets,b)
 	end
 end
@@ -418,15 +442,50 @@ function update_explosions()
  	if (e.t==13) del(explosions,e)
  end
 end
+-->8
+--tools
+
+function animate(ani)
+ return ani[flr(t/8)%#ani+1]
+ --8 : vitesse
+end
+
+function angle_to(x1,y1,x2,y2)
+ return atan2(y2-y1,x2-x1)+0.25
+end
+
+function collision(a,b)
+ local ax,ay,bx,by=a.x+a.x1,a.y+a.y1,b.x+b.x1,b.y+b.y1
+ return not (ax>bx+b.w
+          or ay>by+b.h
+          or ax+a.w<bx
+          or ay+a.h<by)
+end
+
+function elastic_in_out(t,b,c,d)
+ t/=d
+ local ts = t * t
+ local tc = ts*t
+ if t<0.3 then
+  return b+c*(56*tc*ts + -105*ts*ts + 60*tc + -10*ts + 0*t)
+ elseif t>0.7 then
+  return b+c*(56*tc*ts + -175*ts*ts + 200*tc + -100*ts + 20*t)
+ else
+  lt=(t-0.3)/0.4   
+  lc=0.98884*c       
+  lb=b+lc*(0.00558)
+  return lc * lt + lb
+ end
+end
 __gfx__
-000000000060060000a00a0000000000000ee0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-000000000060060000a00a00000bbb0000ecce0000000000000ccc00000880000000000000000000000000000000000000000000000000000000000000000000
-00700700006006000090090000bbbbb00ecddce0008080000cccccc0008998000000000000000000000000000000000000000000000000000000000000000000
-0007700006dc7d60009009000bb0b0bbecddddce08888800ccc0c0cc089aa9800000000000000000000000000000000000000000000000000000000000000000
-0007700006dccd60009009000bbbbbbbecddddce08888800cccccccc088888800000000000000000000000000000000000000000000000000000000000000000
-00700700d66dd66d000000000bbbbbbb0ecddce0008880000ccccccc088888800000000000000000000000000000000000000000000000000000000000000000
-00000000d666666d0000000000b0b0b000ecce000008000000c0cc00008080000000000000000000000000000000000000000000000000000000000000000000
-00000000050dd0500000000000000000000ee0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000000000060060000a00a0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000000000060060000a00a00000bbb000000000000000000000ccc00000880000000000000000000000000000000000000000000000000000000000000000000
+00700700006006000090090000bbbbb0000ee000008080000cccccc0008998000000000000000000000000000000000000000000000000000000000000000000
+0007700006dc7d60009009000bb0b0bb00ecce0008888800ccc0c0cc089aa9800000000000000000000000000000000000000000000000000000000000000000
+0007700006dccd60009009000bbbbbbb00ecce0008888800cccccccc088888800000000000000000000000000000000000000000000000000000000000000000
+00700700d66dd66d000000000bbbbbbb000ee000008880000ccccccc088888800000000000000000000000000000000000000000000000000000000000000000
+00000000d666666d0000000000b0b0b0000000000008000000c0cc00008080000000000000000000000000000000000000000000000000000000000000000000
+00000000050dd0500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00600600006006000060060000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00600600006006000060060000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00600600006006000060060000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
