@@ -130,6 +130,7 @@ function init_shmup()
  e_bullets={}
  enemies={}
  explosions={}
+ wave=1
  init_player()
 end
 
@@ -141,8 +142,10 @@ function update_shmup()
 	update_bullets()
 	update_explosions()
 	if #enemies==0 then
-	 spawn_enemies(3+flr(rnd(3)),enemy[flr(rnd(2))+1])
+	 --spawn_enemies(3+flr(rnd(3)),enemy[flr(rnd(2))+1])
 	 --spawn_enemies(2,enemy[2])
+	 spawn_enemies(stage_1[wave][1],enemy[stage_1[wave][2]])
+	 wave=min(#stage_1,wave+1)
 	end
 end
 
@@ -271,6 +274,13 @@ function init_database()
     end
    end
   }
+ }
+ --stages
+ stage_1={
+   {3,1},
+   {1,2},
+   {4,1},
+   {3,2}
  }
 end
 -->8
