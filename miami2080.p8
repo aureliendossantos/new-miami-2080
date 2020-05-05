@@ -130,6 +130,7 @@ function init_shmup()
  e_bullets={}
  enemies={}
  explosions={}
+ stage=1
  wave=1
  init_player()
 end
@@ -142,10 +143,8 @@ function update_shmup()
 	update_bullets()
 	update_explosions()
 	if #enemies==0 then
-	 --spawn_enemies(3+flr(rnd(3)),enemy[flr(rnd(2))+1])
-	 --spawn_enemies(2,enemy[2])
-	 spawn_enemies(stage_1[wave][1],enemy[stage_1[wave][2]])
-	 wave=min(#stage_1,wave+1)
+	 spawn_enemies(stages[stage][wave][1],enemy[stages[stage][wave][2]])
+	 wave=min(#stages[stage],wave+1)
 	end
 end
 
@@ -178,7 +177,7 @@ function init_database()
 	--ships
 	ship={
 	 {
-	  speed=1,
+	  speed=1.2,
    life=3,
    anim={16,18,20}
   },
@@ -186,7 +185,7 @@ function init_database()
    speed=1.5,
    life=4,
    price=2000,
-   anim={32}
+   anim={16,18,20}
   }
  }
  --weapons
@@ -275,12 +274,20 @@ function init_database()
    end
   }
  }
- --stages
- stage_1={
+ --stages:nombre,ennemi
+ stages={
+  {
    {3,1},
    {1,2},
    {4,1},
    {3,2}
+  },
+  {
+   {3,1},
+   {1,2},
+   {4,1},
+   {3,2}
+  }
  }
 end
 -->8
@@ -305,32 +312,36 @@ end
 
 function update_player()
  --movement
- local ix,iy=0,0
+ local ix,iy,speed=0,0,1
  if (btn(⬅️)) ix-=1
 	if (btn(➡️)) ix+=1
 	if (btn(⬆️)) iy-=1
 	if (btn(⬇️)) iy+=1
-	if ix~=0 and iy~=0 then
-	 ix*=0.9
-	 iy*=0.9
+	if ix~=0 and iy~=0 and btn(🅾️) then
+	 ix*=0.8
+	 iy*=0.8
+	 speed=p.speed*0.6
+	elseif btn(🅾️) then
+		speed=p.speed*0.6
 	else
-	 p.x,p.y=flr(p.x),flr(p.y)
+	 speed=p.speed
+	 --p.x,p.y=flr(p.x),flr(p.y)
 	end
 	--avance sans bords de l'ecran
-	p.x=mid(-6,p.x+ix*p.speed,118)
-	p.y=mid(-8,p.y+iy*p.speed,115)
-	--weapon1
+	p.x=mid(-6,p.x+ix*speed,118)
+	p.y=mid(-8,p.y+iy*speed,115)
+	--weapons
 	p.wep1_t+=1
-	if btn(❎) and p.wep1_t>=p.wep1_t_max then
+	p.wep2_t+=1
+	if btn(🅾️) then
+	 if p.wep2_t>=p.wep2_t_max then
+	  shoot(secondary[eqp[3]],4,-2)
+	  p.wep2_t=0
+	 end
+	elseif btn(❎) and p.wep1_t>=p.wep1_t_max then
 	 shoot(weapon[eqp[2]],-2,2)
 	 shoot(weapon[eqp[2]],10,2)
 	 p.wep1_t=0
-	end
-	--weapon2
-	p.wep2_t+=1
-	if btn(🅾️) and p.wep2_t>=p.wep2_t_max then
-	 shoot(secondary[eqp[3]],4,-2)
-	 p.wep2_t=0
 	end
 	--collision
 	for b in all(e_bullets) do
