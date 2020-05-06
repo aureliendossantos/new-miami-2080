@@ -243,31 +243,66 @@ function init_database()
   {
    --little guy
 	  life=400,
-	  frequency=40,
    anim={3},
    x1=0,y1=0,w=7,h=7,
-   
-   pattern=function (e)
-    local a = angle_to(e.x,e.y,p.x+p.x1-2,p.y+p.y1-2)
-    enemy_shoot(e.x,e.y,a,1.6)
-   end
+   emitters={
+    {1,0,0}
+   }
   },
   {
    --medium guy
 	  life=800,
-	  frequency=4,
    anim={6},
    x1=0,y1=0,w=7,h=7,
-   
-   base=0.25,
-   pattern=function (e)
-    e.pattern_t+=0.1
-    --e.base+=0.001
-    if flr(e.pattern_t)%3~=0 then
-     local var=0.06+sin(e.pattern_t)/50
-     enemy_shoot(e.x,e.y,e.base+var,1.5)
-     enemy_shoot(e.x,e.y,e.base-var,1.5)
-    end
+   emitters={
+    {3,-5,0},
+    {4,5,0},
+    {1,0,0}
+   }
+  }
+ }
+ --bullet emitters
+ emitter={
+  {
+   --follow
+   frequency=40,
+   speed=1.6,
+   repeats=1,
+   angle=function (rpt,emt,e)
+    return angle_to(e.x+emt[2],e.y+emt[3],p.x+p.x1-2,p.y+p.y1-2)
+   end
+  },
+  {
+   --straight down
+   frequency=40,
+   speed=1.6,
+   repeats=1,
+   angle=function ()
+    return 0.25
+   end
+  },
+  {
+   --wave tunnel side1
+   frequency=4,
+   speed=1.5,
+   repeats=1,
+   angle=function (rpt,emt)
+    emt.pattern_t+=0.1
+    if flr(emt.pattern_t)%4~=2 then
+	    return 0.25+0.06+sin(emt.pattern_t)/50
+	   end
+   end
+  },
+  {
+   --wave tunnel side2
+   frequency=4,
+   speed=1.5,
+   repeats=1,
+   angle=function (rpt,emt)
+    emt.pattern_t+=0.1
+    if flr(emt.pattern_t)%4~=2 then
+	    return 0.25-(0.06+sin(emt.pattern_t)/50)
+	   end
    end
   }
  }
@@ -278,6 +313,8 @@ function init_database()
  --(none=wait until 0 enemy)
  stages={
   {
+   {2,1,80,1},
+   {1,2,0,1},
    {1,2,0,1},
    {1,1,98,2,20},
    {1,1,-98,3,20},
@@ -413,8 +450,10 @@ function spawn_enemies(amount,enemy,width,behaviour)
 	 e.start_x,e.start_y=e.x,e.y
 	 --timers
 	 e.move_t=0
-	 e.shoot_t=0
-	 e.pattern_t=0
+	 for emt in all(e.emitters) do
+	  emt.shoot_t=0
+	  emt.pattern_t=0
+	 end
 	 add(enemies,e)
  end
 end
@@ -441,12 +480,18 @@ function update_enemies()
 		--tir
 		if e.x>0 and e.y>0
 		and e.x<120 and e.y<120 then
-		 if	e.shoot_t==e.frequency then
-		  e.pattern(e)
-		  e.shoot_t=0
-		 else
-		  e.shoot_t+=1
-		 end
+		 for emt in all(e.emitters) do
+	  	local em=emitter[emt[1]]
+			 if	emt.shoot_t==em.frequency then
+			  for i=1,em.repeats do
+			   local a=em.angle(i,emt,e)
+			   if (a) enemy_shoot(e.x+emt[2],e.y+emt[3],a,em.speed)
+			  end
+			  emt.shoot_t=0
+			 else
+			  emt.shoot_t+=1
+			 end
+			end
 		end
  end
 end
