@@ -143,8 +143,11 @@ function update_shmup()
 	update_enemies()
 	update_bullets()
 	update_explosions()
-	if #enemies==0 then
-	 spawn_enemies(stages[stage][wave][1],enemy[stages[stage][wave][2]])
+	
+	local info=stages[stage][wave]
+	if (info[5]) info[5]-=1
+	if info[5]==0 or #enemies==0 then
+	 spawn_enemies(info[1],enemy[info[2]],info[3],info[4])
 	 wave=min(#stages[stage],wave+1)
 	end
 end
@@ -242,10 +245,7 @@ function init_database()
 	  life=400,
 	  frequency=40,
    anim={3},
-   movement=function (e)
-    if (e.move_t<60) e.move_t+=1
- 	  e.y=elastic_in_out(e.move_t,-10,30,60)
-   end,
+   x1=0,y1=0,w=7,h=7,
    
    pattern=function (e)
     local a = angle_to(e.x,e.y,p.x+p.x1-2,p.y+p.y1-2)
@@ -257,13 +257,9 @@ function init_database()
 	  life=800,
 	  frequency=4,
    anim={6},
-   movement=function (e)
-    if (e.move_t<60) e.move_t+=1
- 	  e.y=elastic_in_out(e.move_t,-10,30,60)
-   end,
+   x1=0,y1=0,w=7,h=7,
    
    base=0.25,
-   
    pattern=function (e)
     e.pattern_t+=0.1
     --e.base+=0.001
@@ -275,19 +271,26 @@ function init_database()
    end
   }
  }
- --stages:nombre,ennemi
+ --wave arguments:
+ --enemy amount,enemy type,
+ --wave width,behaviour,
+ --time until this wave
+ --(none=wait until 0 enemy)
  stages={
   {
-   {3,1},
-   {1,2},
-   {4,1},
-   {3,2}
+   {1,2,0,1},
+   {1,1,98,2,20},
+   {1,1,-98,3,20},
+   {1,2,-30,2},
+   {4,1,60,2},
+   {2,2,70,2},
+   {3,2,98,2}
   },
   {
-   {3,1},
-   {1,2},
-   {4,1},
-   {3,2}
+   {3,1,98,1},
+   {1,2,98,1},
+   {4,1,98,1},
+   {3,2,98,1}
   }
  }
 end
@@ -376,32 +379,52 @@ end
 -->8
 --enemies
 
-function spawn_enemies(n,type)
- gap=(98-n*8)/(n-1)
- for i=1,n do
- 	add(enemies,{
-	  x=15+8*(i-1)+gap*(i-1),
-	  y=-8,
-	  x1=0,y1=0,
-	  w=7,h=7,
-	  life=type.life,
-	  move_t=0,
-	  shoot_t=0,
-	  shoot_t_max=type.frequency,
-	  a=type.a,
-	  anim=type.anim,
-	  movement=type.movement,
-	  pattern=type.pattern,
-	  pattern_t=0,
-	  base=type.base
-	 })
+function spawn_enemies(amount,enemy,width,behaviour)
+ gap=(width-amount*8)/(amount-1)
+ for i=1,amount do
+  local e={}
+  --recopier la table originelle
+  for j,k in pairs(enemy) do
+   e[j] = k
+  end
+  --movements
+  if behaviour==1 then
+   --normal
+   e.x=flr((128-width)/2)+8*(i-1)+gap*(i-1)
+	  e.x_change=0
+	  e.y=-10
+	  e.y_change=30
+	  e.move_duration=60
+	 elseif behaviour==2 then
+	  --coming from the left
+	  e.x=-80+i*20
+	  e.x_change=flr((128-width)/2)+8*(i-1)+gap*(i-1)-e.x
+	  e.y=10
+	  e.y_change=20
+	  e.move_duration=150+rnd(40)
+	 elseif behaviour==3 then
+	  --coming from the right
+	  e.x=208-i*20
+	  e.x_change=flr((128-width)/2)+8*(i-1)+gap*(i-1)-e.x
+	  e.y=10
+	  e.y_change=20
+	  e.move_duration=150+rnd(40)
+	 end
+	 e.start_x,e.start_y=e.x,e.y
+	 --timers
+	 e.move_t=0
+	 e.shoot_t=0
+	 e.pattern_t=0
+	 add(enemies,e)
  end
 end
 
 function update_enemies()
  for e in all(enemies) do
   --avance
- 	e.movement(e)
+ 	if (e.move_t<e.move_duration) e.move_t+=1
+  e.y=elastic_in_out(e.move_t,e.start_y,e.y_change,e.move_duration)
+	 e.x=elastic_in_out(e.move_t,e.start_x,e.x_change,e.move_duration)
 	 --collision
  	for b in all(bullets) do
  		if collision(e,b) then
@@ -416,26 +439,25 @@ function update_enemies()
 			del(enemies,e)
 		end
 		--tir
-		if e.shoot_t==e.shoot_t_max then
-		 e.pattern(e)
-		 e.shoot_t=0
-		else
-		 e.shoot_t+=1
+		if e.x>0 and e.y>0
+		and e.x<120 and e.y<120 then
+		 if	e.shoot_t==e.frequency then
+		  e.pattern(e)
+		  e.shoot_t=0
+		 else
+		  e.shoot_t+=1
+		 end
 		end
  end
 end
 
 function enemy_shoot(x,y,a,spd)
 	add(e_bullets,{
-	 x=x,
-	 y=y,
+	 x=x,y=y,
+	 x1=3,y1=3,w=1,h=1,
 	 dx=cos(a),
   dy=-sin(a),
-  speed=spd,
-  x1=3,
-  y1=3,
-  w=2,
-  h=2
+  speed=spd
 	})
 end
 -->8
