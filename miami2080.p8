@@ -48,7 +48,6 @@ end
 function _draw()
  _drw()
  dtb_draw()
- print(btnp❎,1,1)
 end
 
 --input manager
@@ -76,6 +75,9 @@ function update_shop()
     choice = min(2,choice+1)
    end
   end
+ end
+ if btnp🅾️ then
+  dtb_disp("j'adore le fromage. surtout quand il est bien fait.")
  end
  if btnp❎ then
   for i=1,3 do
@@ -695,6 +697,8 @@ end
 
 function dtb_update()
 	if #dtb_queu>0 then
+	 text_mode=true
+	 dtb_y=max(121,dtb_y-2)
 		if dtb_curline==0 then
 			dtb_curline=1
 		end
@@ -703,7 +707,7 @@ function dtb_update()
 		local curlinelength=#dtb_dislines[dislineslength]
 		local complete=curlinelength>=#curlines[dtb_curline]
 		if complete and dtb_curline>=#curlines then
-			if btnp(4) then
+			if btnp(4) or btnp(5) then
 				_dtb_nexttext()
 				return
 			end
@@ -729,18 +733,20 @@ function dtb_update()
 				_dtb_nextline()
 			end
 		end
+	else
+	 text_mode=false
+	 dtb_y=min(140,dtb_y+2)
 	end
 end
 
 function dtb_draw()
+ rectfill(0,dtb_y-10,127,128,0)
 	if #dtb_queu>0 then
 		local dislineslength=#dtb_dislines
 		local offset=0
 		if dtb_curline<dislineslength then
 			offset=dislineslength-dtb_curline
 		end
-		dtb_y=max(121,dtb_y-2)
-		rectfill(0,dtb_y-10,127,128,1)
 		for i=1,dislineslength do
 			print(dtb_dislines[i],2,i*8+dtb_y-(dislineslength+offset)*8,7)
 		end
