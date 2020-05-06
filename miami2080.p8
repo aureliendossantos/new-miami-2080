@@ -10,6 +10,7 @@ function _init()
  _drw=draw_shop
  
  init_database()
+ dtb_init()
  
  ❎_released=false
  offset=0
@@ -39,33 +40,44 @@ end
 
 --core functions
 function _update60()
+ update_input()
+ dtb_update()
  _upd()
 end
 
 function _draw()
  _drw()
+ dtb_draw()
+ print(btnp❎,1,1)
+end
+
+--input manager
+function update_input()
+ if not text_mode then
+  btn⬅️,btn➡️,btn⬆️,btn⬇️,btn❎,btn🅾️,btnp⬅️,btnp➡️,btnp⬆️,btnp⬇️,btnp❎,btnp🅾️=btn(⬅️),btn(➡️),btn(⬆️),btn(⬇️),btn(❎),btn(🅾️),btnp(⬅️),btnp(➡️),btnp(⬆️),btnp(⬇️),btnp(❎),btnp(🅾️)
+ end
 end
 
 -->8
 --scene shop
 function update_shop()
- if btnp(⬆️) then
+ if btnp⬆️ then
   menu_index=max(1,menu_index-1)
  end
- if btnp(⬇️) then
+ if btnp⬇️ then
   menu_index=min(4,menu_index+1)
  end
  for i=1,3 do
   if menu_index==i then
-   if btnp(⬅️) then
+   if btnp⬅️ then
     choice = max(1,choice-1)
    end
-   if btnp(➡️) then
+   if btnp➡️ then
     choice = min(2,choice+1)
    end
   end
  end
- if btnp(❎) then
+ if btnp❎ then
   for i=1,3 do
    if menu_index==i then
     eqp[i]=choice
@@ -73,9 +85,11 @@ function update_shop()
    end
   end
   if menu_index==4 then
-	  init_shmup()
-	  _upd=update_shmup
-	  _drw=draw_shmup
+   dtb_disp("et c'est parti.",function()
+	   init_shmup()
+	   _upd=update_shmup
+	   _drw=draw_shmup
+   end)
 	 end
  end
 end
@@ -373,10 +387,10 @@ end
 function update_player()
  --movement
  local ix,iy,speed=0,0,1
- if (btn(⬅️)) ix-=1
-	if (btn(➡️)) ix+=1
-	if (btn(⬆️)) iy-=1
-	if (btn(⬇️)) iy+=1
+ if (btn⬅️) ix-=1
+	if (btn➡️) ix+=1
+	if (btn⬆️) iy-=1
+	if (btn⬇️) iy+=1
 	if ix~=0 and iy~=0 and btn(🅾️) then
 	 ix*=0.8
 	 iy*=0.8
@@ -613,6 +627,124 @@ function elastic_in_out(t,b,c,d)
   lb=b+lc*(0.00558)
   return lc * lt + lb
  end
+end
+
+--dialogue text box
+function dtb_init()
+ dtb_y=140
+	dtb_queu={}
+	dtb_queuf={}
+	dtb_numlines=2
+	_dtb_clean()
+end
+
+function dtb_disp(txt,callback)
+	local lines,currline,curword,curchar={},"","",""
+	local upt=function()
+		if #curword+#currline>31 then
+			add(lines,currline)
+			currline=""
+		end
+		currline=currline..curword
+		curword=""
+	end
+	for i=1,#txt do
+		curchar=sub(txt,i,i)
+		curword=curword..curchar
+		if curchar==" " then
+			upt()
+		end
+	end
+	upt()
+	if currline~="" then
+		add(lines,currline)
+	end
+	add(dtb_queu,lines)
+	if callback==nil then
+		callback=0
+	end
+	add(dtb_queuf,callback)
+end
+
+function _dtb_clean()
+	dtb_dislines={}
+	for i=1,dtb_numlines do
+		add(dtb_dislines,"")
+	end
+	dtb_curline=0
+	dtb_ltime=0
+end
+
+function _dtb_nextline()
+	dtb_curline+=1
+	for i=1,#dtb_dislines-1 do
+		dtb_dislines[i]=dtb_dislines[i+1]
+	end
+	dtb_dislines[#dtb_dislines]=""
+end
+
+function _dtb_nexttext()
+	if dtb_queuf[1]~=0 then
+		dtb_queuf[1]()
+	end
+	del(dtb_queuf,dtb_queuf[1])
+	del(dtb_queu,dtb_queu[1])
+	_dtb_clean()
+	sfx(2)
+end
+
+function dtb_update()
+	if #dtb_queu>0 then
+		if dtb_curline==0 then
+			dtb_curline=1
+		end
+		local dislineslength=#dtb_dislines
+		local curlines=dtb_queu[1]
+		local curlinelength=#dtb_dislines[dislineslength]
+		local complete=curlinelength>=#curlines[dtb_curline]
+		if complete and dtb_curline>=#curlines then
+			if btnp(4) then
+				_dtb_nexttext()
+				return
+			end
+		elseif dtb_curline>0 then
+			dtb_ltime-=1
+			if not complete then
+				if dtb_ltime<=0 then
+					local curchari=curlinelength+1
+					local curchar=sub(curlines[dtb_curline],curchari,curchari)
+					dtb_ltime=1
+					if curchar~=" " then
+						sfx(0)
+					end
+					if curchar=="." then
+						dtb_ltime=6
+					end
+					dtb_dislines[dislineslength]=dtb_dislines[dislineslength]..curchar
+				end
+				if btnp(4) then
+					dtb_dislines[dislineslength]=curlines[dtb_curline]
+				end
+			else
+				_dtb_nextline()
+			end
+		end
+	end
+end
+
+function dtb_draw()
+	if #dtb_queu>0 then
+		local dislineslength=#dtb_dislines
+		local offset=0
+		if dtb_curline<dislineslength then
+			offset=dislineslength-dtb_curline
+		end
+		dtb_y=max(121,dtb_y-2)
+		rectfill(0,dtb_y-10,127,128,1)
+		for i=1,dislineslength do
+			print(dtb_dislines[i],2,i*8+dtb_y-(dislineslength+offset)*8,7)
+		end
+	end
 end
 __gfx__
 00000000006006000000000000200200000000000111111000e00e00000000000000000000000000000000000000000000000000000000000000000000000000
