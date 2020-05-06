@@ -250,7 +250,7 @@ function init_database()
    }
   },
   {
-   --medium guy
+   --tunnel guy
 	  life=800,
    anim={6},
    x1=0,y1=0,w=7,h=7,
@@ -258,6 +258,15 @@ function init_database()
     {3,-5,0},
     {4,5,0},
     {1,0,0}
+   }
+  },
+  {
+   --wheel guy
+	  life=800,
+   anim={6},
+   x1=0,y1=0,w=7,h=7,
+   emitters={
+    {5,0,0}
    }
   }
  }
@@ -304,6 +313,16 @@ function init_database()
 	    return 0.25-(0.06+sin(emt.pattern_t)/50)
 	   end
    end
+  },
+  {
+   --wheel
+   frequency=8,
+   speed=1.3,
+   repeats=4,
+   angle=function (rpt,emt)
+    emt.pattern_t+=0.01
+	   return emt.pattern_t+0.25*rpt
+   end
   }
  }
  --wave arguments:
@@ -313,7 +332,7 @@ function init_database()
  --(none=wait until 0 enemy)
  stages={
   {
-   {2,1,80,1},
+   {1,3,40,1},
    {1,2,0,1},
    {1,2,0,1},
    {1,1,98,2,20},
