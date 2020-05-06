@@ -12,11 +12,12 @@ function _init()
  init_database()
  dtb_init()
  
- ❎_released=false
  offset=0
  t=0
  menu_index=1
  choice=1
+ money=10000
+ money_printed=10000
  
  --temp angle
  a=0
@@ -50,6 +51,28 @@ function _draw()
  dtb_draw()
 end
 
+function draw_money()
+ if money_printed<money-15 then
+  money_printed+=15
+	 print_money(10)
+ elseif money_printed<money then
+  money_printed+=1
+	 print_money(10)
+ elseif money_printed>money+55 then
+  money_printed-=55
+	 print_money(8)
+ elseif money_printed>money then
+  money_printed-=1
+	 print_money(8)
+ else
+  print_money(9)
+ end
+end
+
+function print_money(col)
+	print("$"..money_printed,100,1,col)
+end
+
 --input manager
 function update_input()
  if not text_mode then
@@ -60,6 +83,7 @@ end
 -->8
 --scene shop
 function update_shop()
+ --local items={ship,weapon,secondary}
  if btnp⬆️ then
   menu_index=max(1,menu_index-1)
  end
@@ -82,8 +106,27 @@ function update_shop()
  if btnp❎ then
   for i=1,3 do
    if menu_index==i then
-    eqp[i]=choice
-    sfx(1)
+    local item
+    if i==1 then
+     item=ship[choice]
+    elseif i==2 then
+     item=weapon[choice]
+    else
+     item=secondary[choice]
+    end
+    if item.price and not item.bought then
+     if item.price<=money then
+      money-=item.price
+      item.bought=true
+      eqp[i]=choice
+      sfx(2)
+     else
+      sfx(0)
+     end
+    else
+     eqp[i]=choice
+     sfx(1)
+    end
    end
   end
   if menu_index==4 then
@@ -109,34 +152,46 @@ function draw_shop()
   rectfill(45,91,82,103,2)
   print("deploy",52,95,9)
  end
- --ships
+ --items
  draw_items(ship,1,36)
  draw_items(weapon,2,54)
  draw_items(secondary,3,72)
+ --money
+ draw_money()
 end
 
 function draw_items(array,eqp_slot,y)
  for i,c in pairs(array) do
-  local x=19+14*(i-1)
-  draw_item(x,y,3)
+  local x=18+17*(i-1)
+  draw_item(x,y,13,3)
   if menu_index==eqp_slot and 
   choice==i then
-   draw_item(x,y,11)
+   draw_item(x,y,9,11)
   end
   if eqp[eqp_slot]==i then
-   draw_item(x,y,9)
+   draw_item(x,y,13,9)
   end
   if menu_index==eqp_slot and 
   choice==i and
   eqp[eqp_slot]==i then
-   draw_item(x,y,10)
+   draw_item(x,y,9,10)
   end
-  spr(c.anim[1],x+2,y+2)
+  if eqp_slot==1 then
+   spr(c.anim[1],x,y,2,2)
+  else
+   spr(c.anim[1],x+4,y+3)
+  end
+  if c.price and not c.bought then
+   print(c.price,x+1,y+11,1)
+   print(c.price,x+2,y+11,1)
+   print(c.price,x+1,y+10,6)
+  end
  end
 end
 
-function draw_item(x,y,col)
- rectfill(x,y,x+12,y+15,col)
+function draw_item(x,y,col1,col2)
+ rectfill(x,y,x+15,y+16,col1)
+ rectfill(x+1,y+1,x+14,y+15,col2)
 end
 
 -->8
@@ -150,6 +205,7 @@ function init_shmup()
  stage=1
  wave=1
  init_player()
+ money_printed=money
 end
 
 function update_shmup()
@@ -186,6 +242,7 @@ function draw_shmup()
 	for i=1,p.life do
 		spr(5,i*8,1)
 	end
+	draw_money()
 end
 -->8
 --database
@@ -221,6 +278,7 @@ function init_database()
    w=3,h=4
   },
   {
+   price=800,
    speed=6,
    frequency=12,
    duration=15,
@@ -259,6 +317,7 @@ function init_database()
   {
    --little guy
 	  life=400,
+	  money=20,
    anim={3},
    x1=0,y1=0,w=7,h=7,
    emitters={
@@ -268,6 +327,7 @@ function init_database()
   {
    --tunnel guy
 	  life=800,
+	  money=120,
    anim={6},
    x1=0,y1=0,w=7,h=7,
    emitters={
@@ -279,6 +339,7 @@ function init_database()
   {
    --wheel guy
 	  life=800,
+	  money=120,
    anim={6},
    x1=0,y1=0,w=7,h=7,
    emitters={
@@ -445,7 +506,7 @@ end
 
 function draw_player()
  if p.inv_t%3==0 then
- 	spr(animate(p.anim),p.x,p.y,2,3)
+ 	spr(animate(p.anim),p.x,p.y,2,2)
  end
 end
 -->8
@@ -510,6 +571,7 @@ function update_enemies()
 		end
 		--mort
 		if e.life<=0 then
+		 money+=e.money
 			del(enemies,e)
 		end
 		--tir
