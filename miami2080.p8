@@ -284,7 +284,7 @@ function init_database()
    speed=1.2,
    life=4,
    price=2000,
-   anim={22},
+   anim={18},
    x1=7,y1=7,
    w=1,h=1
   }
@@ -297,7 +297,7 @@ function init_database()
    duration=35,
    damage=100,
    sfx=0,
-   anim={2},
+   anim={30},
    x1=2,y1=0,
    w=3,h=4
   },
@@ -308,7 +308,7 @@ function init_database()
    duration=15,
    damage=160,
    sfx=2,
-   anim={2},
+   anim={30},
    x1=1,y1=2,
    w=4,h=4
   }
@@ -321,7 +321,7 @@ function init_database()
    duration=35,
    damage=200,
    sfx=0,
-   anim={4},
+   anim={31},
    x1=1,y1=2,
    w=4,h=4
   },
@@ -331,7 +331,7 @@ function init_database()
    duration=15,
    damage=300,
    sfx=2,
-   anim={4},
+   anim={31},
    x1=1,y1=2,
    w=4,h=4
   }
@@ -342,7 +342,7 @@ function init_database()
    --little guy
 	  life=400,
 	  money=20,
-   anim={3},
+   anim={1},
    spr_w=1,spr_h=1,
    x1=0,y1=0,w=7,h=7,
    emitters={
@@ -353,7 +353,7 @@ function init_database()
    --tunnel guy
 	  life=800,
 	  money=120,
-   anim={6},
+   anim={2},
    spr_w=1,spr_h=1,
    x1=0,y1=0,w=7,h=7,
    emitters={
@@ -366,7 +366,7 @@ function init_database()
    --wheel guy
 	  life=800,
 	  money=120,
-   anim={6},
+   anim={2},
    spr_w=1,spr_h=1,
    x1=0,y1=0,w=7,h=7,
    emitters={
@@ -377,7 +377,7 @@ function init_database()
    --laser guy
 	  life=1500,
 	  money=140,
-   anim={6},
+   anim={2},
    spr_w=1,spr_h=1,
    x1=0,y1=0,w=7,h=7,
    emitters={
