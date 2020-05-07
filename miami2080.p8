@@ -206,7 +206,7 @@ function init_shmup()
  e_bullets={}
  enemies={}
  explosions={}
- stage=1
+ stage=2
  wave=1
  init_player()
  money_printed=money
@@ -386,7 +386,7 @@ function init_database()
   },
   {
    --giga boss
-	  life=32000,
+	  life=10000,
 	  money=10000,
    anim={128},
    spr_w=16,spr_h=4,
@@ -685,8 +685,8 @@ function update_enemies()
  		 e.life-=b.damage
  		 --explode(b.x+4,b.y)
  		 for i=1,3 do
-		   add_new_dust(b.x+4,b.y,rnd(2)-1,rnd(1.5)-2,15,rnd(3)+1,0.1,dust_col,true)
-    end
+     add_new_dust(b.x+4,b.y,rnd(2)-1,rnd(1.5)-2,15,rnd(3)+1,0.1,dust_col,true)
+ 			end
  			del(bullets,b)
  			sfx(1)
 			end
@@ -694,8 +694,8 @@ function update_enemies()
 		--mort
 		if e.life<=0 then
 		 money+=e.money
-		 for i=1,10 do
-		  add_new_dust(e.x+4,e.y+4,rnd(2)-1,rnd(2)-2.1,rnd(10)+20,rnd(6)+2,0.05,dust_col)
+		 for i=1,(e.w+e.h)/2 do
+		  add_new_dust(e.x+e.x1+rnd(e.w),e.y+e.y1+rnd(e.h),rnd(2)-1,rnd(2)-2.1,rnd(10)+20,rnd(6)+2,0.05,dust_col)
    end
   del(enemies,e)
 		end
