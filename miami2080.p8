@@ -34,9 +34,6 @@ end
 
 --scene gameover
 function update_gameover()
- if not btn(❎) then
-  ❎_released = true
- end
  if ❎_released and btn(❎) then
  	_init()
  end
@@ -53,6 +50,8 @@ function _update60()
  update_input()
  dtb_update()
  _upd()
+ --this must be at the end
+ update_released()
 end
 
 function _draw()
@@ -86,9 +85,24 @@ end
 function update_input()
  if not text_mode then
   btn⬅️,btn➡️,btn⬆️,btn⬇️,btn❎,btn🅾️,btnp⬅️,btnp➡️,btnp⬆️,btnp⬇️,btnp❎,btnp🅾️=btn(⬅️),btn(➡️),btn(⬆️),btn(⬇️),btn(❎),btn(🅾️),btnp(⬅️),btnp(➡️),btnp(⬆️),btnp(⬇️),btnp(❎),btnp(🅾️)
+ else
+  --en texte, tout passer a nil
+  btn⬅️,btn➡️,btn⬆️,btn⬇️,btn❎,btn🅾️,btnp⬅️,btnp➡️,btnp⬆️,btnp⬇️,btnp❎,btnp🅾️=false
  end
 end
 
+function update_released()
+	if not btn(❎) then
+  ❎_released=true
+ else
+  ❎_released=false
+ end
+ if not btn(🅾️) then
+  🅾️_released=true
+ else
+  🅾️_released=false
+ end
+end
 -->8
 --scene shop
 function update_shop()
@@ -116,7 +130,7 @@ function update_shop()
    end
   end
  end
- if btnp❎ then
+ if btnp❎ and ❎_released then
   if menu_index<=3 then
 	  item=item[menu_index][choice]
    if item.price and not item.bought then
@@ -206,8 +220,10 @@ function init_shmup()
  e_bullets={}
  enemies={}
  explosions={}
- stage=2
- wave=1
+ stage=1
+ wave=0
+ notif_text=""
+ notif_t=0
  init_player()
  money_printed=money
 end
@@ -215,22 +231,51 @@ end
 function update_shmup()
  t+=1
  screen_shake()
-	update_player()
+ update_player()
 	update_enemies()
 	update_bullets()
 	update_explosions()
+	wave_manager()
 	for d in all(dust) do
   d:update()
  end
  for d in all(dust_front) do
   d:update()
  end
-	
-	local info=stages[stage][wave]
-	if (info[5]) info[5]-=1
-	if info[5]==0 or #enemies==0 then
-	 spawn_enemies(info[1],enemy[info[2]],info[3],info[4])
-	 wave=min(#stages[stage],wave+1)
+end
+
+function wave_manager()
+	if wave==0 then
+	 update_stage_start()
+	else
+		local info=stages[stage][wave]
+		--decrease wave timer
+		if (info[5]) info[5]-=1
+		--when timer=0 or no enemy
+		if not text_mode and (info[5]==0 or #enemies==0) then
+		 if type(info[1])=="function" then
+			 info[1]()
+		 elseif type(info[1])=="string" then
+		  for t in all(info) do
+		   dtb_disp(t)
+		  end
+		 else
+		  spawn_enemies(info[1],enemy[info[2]],info[3],info[4])
+		 end
+		 --next wave
+		 wave=min(#stages[stage],wave+1)
+		 --wave+=1
+		end
+	end
+end
+
+function update_stage_start()
+	notif_t+=1
+	notif_text="day "..stage
+	if p.y==80 then
+	 wave=1
+	else
+		p.y=max(80,p.y-0.5)
 	end
 end
 
@@ -263,6 +308,7 @@ function draw_shmup()
 	end
 	draw_money()
 	draw_bosslife()
+	draw_notif(notif_text,notif_t)
 end
 
 function draw_bosslife()
@@ -370,13 +416,13 @@ function init_database()
    --tunnel guy
 	  life=800,
 	  money=120,
-   anim={2},
-   spr_w=1,spr_h=1,
-   x1=0,y1=0,w=7,h=7,
+   anim={4},
+   spr_w=2,spr_h=1,
+   x1=0,y1=0,w=15,h=7,
    emitters={
-    {3,-5,0},
-    {4,5,0},
-    {1,0,0}
+    {3,0,2},
+    {4,8,2},
+    {1,4,0}
    }
   },
   {
@@ -394,11 +440,11 @@ function init_database()
    --laser guy
 	  life=1500,
 	  money=140,
-   anim={2},
-   spr_w=1,spr_h=1,
-   x1=0,y1=0,w=7,h=7,
+   anim={4},
+   spr_w=2,spr_h=1,
+   x1=0,y1=0,w=15,h=7,
    emitters={
-    {7,0,0}
+    {7,4,0}
    }
   },
   {
@@ -531,9 +577,14 @@ function init_database()
  stages={
   {
    {1,4,40,1},
+   {"interessant.","enfin, y a pas de quoi etre fier non plus,","mais c'est pas mal."},
    {1,4,-40,1},
-   {1,1,98,2,1},
-   {1,1,-98,3,1},
+   {1,1,80,2,1},
+   {1,1,-80,3,1},
+   --{function()
+	   --_upd=update_shop
+	   --_drw=draw_shop
+   --end},
    {1,3,40,1},
    {1,2,0,1},
    {1,2,30,1},
@@ -558,7 +609,7 @@ function init_player()
  for j,k in pairs(ship[eqp[1]]) do
   p[j] = k
  end
-	p.x,p.y=60,80
+	p.x,p.y=56,158
  p.invincible=false
  p.inv_t=0
  p.wep1_t=0
@@ -574,28 +625,30 @@ function update_player()
 	if (btn➡️) ix+=1
 	if (btn⬆️) iy-=1
 	if (btn⬇️) iy+=1
-	if ix~=0 and iy~=0 and btn(🅾️) then
+	if ix~=0 and iy~=0 and btn🅾️ then
 	 ix*=0.8
 	 iy*=0.8
 	 speed=p.speed*0.6
-	elseif btn(🅾️) then
+	elseif btn🅾️ then
 		speed=p.speed*0.6
 	else
 	 speed=p.speed
 	 --p.x,p.y=flr(p.x),flr(p.y)
 	end
 	--avance sans bords de l'ecran
-	p.x=mid(-6,p.x+ix*speed,118)
-	p.y=mid(-8,p.y+iy*speed,115)
+	if wave~=0 then
+	 p.x=mid(-6,p.x+ix*speed,118)
+	 p.y=mid(-8,p.y+iy*speed,115)
+	end
 	--weapons
 	p.wep1_t+=1
 	p.wep2_t+=1
-	if btn(🅾️) then
+	if btn🅾️ then
 	 if p.wep2_t>=p.wep2_t_max then
 	  shoot(secondary[eqp[3]],4,-2)
 	  p.wep2_t=0
 	 end
-	elseif btn(❎) and p.wep1_t>=p.wep1_t_max then
+	elseif btn❎ and p.wep1_t>=p.wep1_t_max then
 	 shoot(weapon[eqp[2]],-2,2)
 	 shoot(weapon[eqp[2]],10,2)
 	 p.wep1_t=0
@@ -700,7 +753,6 @@ function update_enemies()
  	for b in all(bullets) do
  		if collision(e,b) then
  		 e.life-=b.damage
- 		 --explode(b.x+4,b.y)
  		 for i=1,3 do
      add_new_dust(b.x+4,b.y,rnd(2)-1,rnd(1.5)-2,15,rnd(3)+1,0.1,dust_col,true)
  			end
@@ -712,7 +764,7 @@ function update_enemies()
 		if e.life<=0 then
 		 money+=e.money
 		 for i=1,(e.w+e.h)/2 do
-		  add_new_dust(e.x+e.x1+rnd(e.w),e.y+e.y1+rnd(e.h),rnd(2)-1,rnd(2)-2.1,rnd(10)+20,rnd(6)+2,0.05,dust_col)
+		  add_new_dust(e.x+e.x1+rnd(e.w),e.y+e.y1+rnd(e.h),rnd(2)-1,rnd(2)-2.1,rnd(10)+((e.w+e.h)/2)*2.2,rnd(6)+2,0.05,dust_col)
    end
   del(enemies,e)
 		end
@@ -823,6 +875,31 @@ function collision(a,b)
           or ay+a.h<by)
 end
 
+function draw_notif(text,timer)
+ local buffer=20
+ local height=4
+ local tmax=160
+ if timer<22+buffer then
+  d=timer-buffer
+ else
+  d=tmax-timer-buffer
+ end
+ if d>0 then
+  h=min(height,(d-16)*0.75)
+  if d<16 then
+   line(0,64,d*4,64,8)
+   line(127,64,127-d*4,64,8)
+  else
+   rectfill(0,64-h,127,64+h,8)
+   rect(-1,64-h-2,128,64+h+2,7)
+  end
+  if h>=2 then
+   x1=100-(timer*0.5)
+   print(text,x1,62,7)
+  end
+ end
+end
+
 function elastic_in_out(t,b,c,d)
  t/=d
  local ts = t * t
@@ -915,7 +992,7 @@ function dtb_update()
 		local curlinelength=#dtb_dislines[dislineslength]
 		local complete=curlinelength>=#curlines[dtb_curline]
 		if complete and dtb_curline>=#curlines then
-			if btnp(4) or btnp(5) then
+			if (btnp(4) and 🅾️_released) or (btnp(5) and ❎_released) then
 				_dtb_nexttext()
 				return
 			end
@@ -933,9 +1010,6 @@ function dtb_update()
 						dtb_ltime=6
 					end
 					dtb_dislines[dislineslength]=dtb_dislines[dislineslength]..curchar
-				end
-				if btnp(4) then
-					dtb_dislines[dislineslength]=curlines[dtb_curline]
 				end
 			else
 				_dtb_nextline()
@@ -1045,13 +1119,13 @@ function add_new_dust(_x,_y,_dx,_dy,_l,_s,_g,_f,front)
 	end
 end
 __gfx__
-000000000020020000e00e00000ee00000000000000000000000000000000000000000000000000000000000000000008e7777e800eeee000000000000000000
-00000000028228200e2ee2e000e88e0000000000000000000000000000000000000000000000000000000000000000008e7777e80e7777e00008800000000000
-0070070028888882e222222e0e8888e000000000000000000000000000000000000000000000000000000000000000008e7777e8e777777e0087780000088000
-0007700028856882e225622e00e8658e00000000000000000000000000000000000000000000000000000000000000008e7777e8e777777e0877778000877800
-00077000028558200e2552e000e8558e00000000000000000000000000000000000000000000000000000000000000008e7777e8e777777e0877778000877800
-007007000028820000e22e000e8888e000000000000000000000000000000000000000000000000000000000000000008e7777e8e777777e0087780000088000
-0000000000022000000ee00000e88e0000000000000000000000000000000000000000000000000000000000000000000e7777e00e7777e00008800000000000
+000000000020020000e00e00000ee00000eeee0000eeee000000000000000000000000000000000000000000000000008e7777e800eeee000000000000000000
+00000000028228200e2ee2e000e88e000e2222e00e2222e00000000000000000000000000000000000000000000000008e7777e80e7777e00008800000000000
+0070070028888882e222222e0e8888e0e222222ee222222e0000000000000000000000000000000000000000000000008e7777e8e777777e0087780000088000
+0007700028856882e225622e00e8658ee22222256222222e0000000000000000000000000000000000000000000000008e7777e8e777777e0877778000877800
+00077000028558200e2552e000e8558e0ee2222552222ee00000000000000000000000000000000000000000000000008e7777e8e777777e0877778000877800
+007007000028820000e22e000e8888e000eee222222eee000000000000000000000000000000000000000000000000008e7777e8e777777e0087780000088000
+0000000000022000000ee00000e88e0000ee0eeeeee0ee000000000000000000000000000000000000000000000000000e7777e00e7777e00008800000000000
 000000000000000000000000000ee00000000000000000000000000000000000000000000000000000000000000000000077770000eeee000000000000000000
 00000001100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000015d10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
