@@ -259,9 +259,26 @@ function draw_shmup()
 	end
 	--rectfill(p.x+p.x1,p.y+p.y1,p.x+p.x1+p.w,p.y+p.y1+p.h)
 	for i=1,p.life do
-		spr(5,i*8,1)
+		spr(80,i*8,1)
 	end
 	draw_money()
+	draw_bosslife()
+end
+
+function draw_bosslife()
+ for e in all(enemies) do
+ 	if e.boss then
+ 	 local col=1
+ 	 local w=6+e.life/enemy[5].life*119
+ 		line(5,1,125,1,col)
+ 		for i=1,3 do
+ 			local y=1+i
+ 			line(5-i,y,126-i,y,col)
+ 			line(6-i,y,w-i,y,8)
+			end
+			line(2,5,122,5,col)
+		end
+ end
 end
 -->8
 --database
@@ -386,7 +403,8 @@ function init_database()
   },
   {
    --giga boss
-	  life=10000,
+   boss=true,
+	  life=20000,
 	  money=10000,
    anim={128},
    spr_w=16,spr_h=4,
