@@ -2,7 +2,7 @@ pico-8 cartridge // http://www.pico-8.com
 version 24
 __lua__
 --miami 2080
---nev / foxfiesta
+--surveillance brigade operations
 
 function _init()
  --particles
@@ -448,6 +448,19 @@ function init_database()
    }
   },
   {
+   --horizontal laser guy
+	  life=1500,
+	  following=true,
+	  lifespan=300,
+	  money=140,
+   anim={3},
+   spr_w=1,spr_h=1,
+   x1=0,y1=0,w=7,h=7,
+   emitters={
+    {8,0,0}
+   }
+  },
+  {
    --giga boss
    boss=true,
 	  life=20000,
@@ -545,6 +558,23 @@ function init_database()
 	    return 0.25
 	   end
    end
+  },
+  {
+   --horizontal laser
+   bullet=5,
+   frequency=1,
+   speed=3,
+   repeats=1,
+   angle=function (rpt,emt,e)
+    emt.pattern_t+=0.1
+    if flr(emt.pattern_t)%10>=3 then
+	    if e.x<64 then
+		    return 0
+		   else
+		    return 0.5
+		   end
+	   end
+   end
   }
  }
  bullet={
@@ -567,6 +597,11 @@ function init_database()
    anim={12},
    x1=0,y1=0,
    w=7,h=5
+  },
+  {
+   anim={11},
+   x1=0,y1=0,
+   w=5,h=7
   }
  }
  --wave arguments:
@@ -576,8 +611,7 @@ function init_database()
  --(none=wait until 0 enemy)
  stages={
   {
-   {1,4,40,1},
-   {"interessant.","enfin, y a pas de quoi etre fier non plus,","mais c'est pas mal."},
+   --{"interessant.","enfin, y a pas de quoi etre fier non plus,","mais c'est pas mal."},
    {1,4,-40,1},
    {1,1,80,2,1},
    {1,1,-80,3,1},
@@ -587,6 +621,8 @@ function init_database()
    --end},
    {1,3,40,1},
    {1,2,0,1},
+   {1,5,127,5},
+   {1,5,-100,5},
    {1,2,30,1},
    {1,1,98,2,1},
    {1,1,-98,3,20},
@@ -596,7 +632,7 @@ function init_database()
    {3,2,98,2}
   },
   {
-   {1,5,128,4}
+   {1,6,128,4}
   }
  }
 end
@@ -727,6 +763,13 @@ function spawn_enemies(amount,enemy,width,behaviour)
 	  e.x_change=0
 	  e.y=-32
 	  e.y_goal=0
+	 elseif behaviour==5 then
+   --following from above
+   e.x=flr((128-width)/2)+8*(i-1)+gap*(i-1)
+	  e.x_change=0
+	  e.y=-10
+	  e.y_change=p.y+10
+	  e.move_duration=200
 	 end
 	 e.start_x,e.start_y=e.x,e.y
 	 --timers
@@ -742,13 +785,36 @@ end
 function update_enemies()
  for e in all(enemies) do
   --avance
-  if e.move_duration then
- 	 if (e.move_t<e.move_duration) e.move_t+=1
-   e.y=elastic_in_out(e.move_t,e.start_y,e.y_change,e.move_duration)
-	  e.x=elastic_in_out(e.move_t,e.start_x,e.x_change,e.move_duration)
-	 else
-	  e.y=min(e.y_goal,e.y+0.2)
-	 end
+  if not e.ease_finished then
+	  if e.move_duration then
+	 	 if e.move_t<e.move_duration then
+	 	  e.move_t+=1
+	   else
+	    e.ease_finished=true
+	   end
+	   e.y=elastic_in_out(e.move_t,e.start_y,e.y_change,e.move_duration)
+		  e.x=elastic_in_out(e.move_t,e.start_x,e.x_change,e.move_duration)
+		 else
+		  e.y=min(e.y_goal,e.y+0.2)
+		 end
+		else
+		 --mouvement ease termine
+	  if e.following then
+	   if e.y>p.y+4 then
+	   	e.y-=0.2
+	   elseif e.y<p.y+4 then
+	    e.y+=0.2
+    end
+    e.lifespan-=1
+    if e.lifespan==0 then
+     e.ease_finished=false
+     e.move_t=0
+     e.start_y=e.y
+     e.y_change=128
+    end
+    if (e.lifespan==-1) del(enemies,e)
+	  end
+		end
 	 --collision
  	for b in all(bullets) do
  		if collision(e,b) then
@@ -824,7 +890,10 @@ function update_bullets()
 	for b in all(e_bullets) do
 		b.y+=b.dy*b.speed
 		b.x+=b.dx*b.speed
-		if (b.y>130) del(e_bullets,b)
+		if b.y>130 or b.y<-10
+		or b.x>130 or b.x<-10 then
+		 del(e_bullets,b)
+	 end
 	end
 end
 
@@ -1119,14 +1188,14 @@ function add_new_dust(_x,_y,_dx,_dy,_l,_s,_g,_f,front)
 	end
 end
 __gfx__
-000000000020020000e00e00000ee00000eeee0000eeee000000000000000000000000000000000000000000000000008e7777e800eeee000000000000000000
-00000000028228200e2ee2e000e88e000e2222e00e2222e00000000000000000000000000000000000000000000000008e7777e80e7777e00008800000000000
-0070070028888882e222222e0e8888e0e222222ee222222e0000000000000000000000000000000000000000000000008e7777e8e777777e0087780000088000
-0007700028856882e225622e00e8658ee22222256222222e0000000000000000000000000000000000000000000000008e7777e8e777777e0877778000877800
-00077000028558200e2552e000e8558e0ee2222552222ee00000000000000000000000000000000000000000000000008e7777e8e777777e0877778000877800
-007007000028820000e22e000e8888e000eee222222eee000000000000000000000000000000000000000000000000008e7777e8e777777e0087780000088000
-0000000000022000000ee00000e88e0000ee0eeeeee0ee000000000000000000000000000000000000000000000000000e7777e00e7777e00008800000000000
-000000000000000000000000000ee00000000000000000000000000000000000000000000000000000000000000000000077770000eeee000000000000000000
+000000000020020000e00e00000ee00000eeee0000eeee000000000000000000000000000000000000000000888888008e7777e800eeee000000000000000000
+00000000028228200e2ee2e000e88e000e2222e00e2222e00000000000000000000000000000000000000000eeeeeee08e7777e80e7777e00008800000000000
+0070070028888882e222222e0e8888e0e222222ee222222e0000000000000000000000000000000000000000777777778e7777e8e777777e0087780000088000
+0007700028856882e225622e00e8658ee22222256222222e0000000000000000000000000000000000000000777777778e7777e8e777777e0877778000877800
+00077000028558200e2552e000e8558e0ee2222552222ee00000000000000000000000000000000000000000777777778e7777e8e777777e0877778000877800
+007007000028820000e22e000e8888e000eee222222eee000000000000000000000000000000000000000000777777778e7777e8e777777e0087780000088000
+0000000000022000000ee00000e88e0000ee0eeeeee0ee000000000000000000000000000000000000000000eeeeeee00e7777e00e7777e00008800000000000
+000000000000000000000000000ee00000000000000000000000000000000000000000000000000000000000888888000077770000eeee000000000000000000
 00000001100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000015d10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000001551000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000cc00000088000
