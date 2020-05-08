@@ -5,26 +5,26 @@ __lua__
 --surveillance brigade operations
 
 function _init()
+ first_time_map=true
+ cur_threats={}
+ stage=1
  --particles
  dust,dust_front={},{}
  dust_col={5,9,9,10}
  --glitch effect
  glit = {}
- glit.height=32
- glit.width=24
  glit.t=0
 
  --state
- _upd=update_shop
- _drw=draw_shop
+ _upd=update_map
+ _drw=draw_map
+ init_map()
  
  init_database()
  dtb_init()
  
  offset=0
  t=0
- menu_index=1
- choice=1
  money=10000
  money_printed=10000
  
@@ -105,6 +105,13 @@ function update_released()
 end
 -->8
 --scene shop
+
+function init_shop()
+	menu_index=1
+ choice=1
+	trans_t=-30
+end
+
 function update_shop()
  if btnp⬆️ then
   menu_index=max(1,menu_index-1)
@@ -154,50 +161,80 @@ function update_shop()
    end)
 	 end
 	end
+	trans_t+=1
 end
 
 function draw_shop()
- cls(1)
- --big square
- rectfill(10,18,118,110,9)
- rectfill(11,19,117,109,1)
- --deploy
- rectfill(44,90,83,104,9)
- if menu_index==4 then
-  print("deploy",52,95,1)
+ if trans_t<0 then
+  cls(11)
  else
-  rectfill(45,91,82,103,2)
-  print("deploy",52,95,9)
+	 cls(3)
+	end
+ --big square
+ if trans_t>15 then
+  rect(10,20,118,95,11)
  end
+ if trans_t>17 then
+  rectfill(11,21,117,94,13)
+ end
+ --deploy
+ if trans_t>13 then
+	 local x,y=14,99
+	 rectfill(x,y,x+36,y+12,11)
+	 if menu_index==4 then
+	  print("deploy",x+7,y+4,3)
+	 else
+	  rectfill(x,y,x+36,y+12,0)
+	  print("deploy",x+7,y+4,11)
+	 end
+	end
  --items
- draw_items(ship,1,36)
- draw_items(weapon,2,54)
- draw_items(secondary,3,72)
- --money
- print("🅾️ info",86,23,2)
- draw_money()
+ if trans_t>90 then
+  draw_items(ship,1,38)
+ end
+ if trans_t>140 then
+  draw_items(weapon,2,56)
+ end
+ if trans_t>143 then
+  draw_items(secondary,3,74)
+ end
+ if trans_t>45 then
+	 print("shop",20,26,5)
+	 print("shop",21,26,5)
+	 print("shop",20,25,6)
+	 print("c:info",86,26,5)
+	 print("c:info",87,26,5)
+	 print("c:info",86,25,6)
+ end
+ if trans_t>13 then
+  rectfill(11,11,40,16,0)
+	 print("stage"..stage,12,12,11)
+	 rectfill(89,11,117,16,0)
+	 print("$"..money,90,12,11)
+	end
+	frame_borders()
 end
 
 function draw_items(array,eqp_slot,y)
  for i,c in pairs(array) do
-  local x=18+17*(i-1)
+  local x=18+22*(i-1)
   draw_item(x,y,13,3)
   if menu_index==eqp_slot and 
   choice==i then
-   draw_item(x,y,9,11)
+   draw_item(x,y,11,3)
   end
   if eqp[eqp_slot]==i then
-   draw_item(x,y,13,9)
+   draw_item(x,y,13,6)
   end
   if menu_index==eqp_slot and 
   choice==i and
   eqp[eqp_slot]==i then
-   draw_item(x,y,9,10)
+   draw_item(x,y,11,6)
   end
   if eqp_slot==1 then
-   spr(c.anim[1],x,y,2,2)
+   spr(c.anim[1],x+2,y+1,2,2)
   else
-   spr(c.anim[1],x+4,y+3)
+   spr(c.anim[1],x+6,y+3)
   end
   if c.price and not c.bought then
    print(c.price,x+1,y+11,1)
@@ -208,8 +245,10 @@ function draw_items(array,eqp_slot,y)
 end
 
 function draw_item(x,y,col1,col2)
- rectfill(x,y,x+15,y+16,col1)
- rectfill(x+1,y+1,x+14,y+15,col2)
+ if trans_t>94 then
+  rect(x,y,x+19,y+16,col1)
+ end
+ rectfill(x+1,y+1,x+18,y+15,col2)
 end
 
 -->8
@@ -220,7 +259,6 @@ function init_shmup()
  e_bullets={}
  enemies={}
  explosions={}
- stage=1
  wave=0
  notif_text=""
  notif_t=0
@@ -250,7 +288,9 @@ function wave_manager()
 	else
 		local info=stages[stage][wave]
 		--decrease wave timer
-		if (info[5]) info[5]-=1
+		if type(info[5])=="number" then
+			info[5]-=1
+		end
 		--when timer=0 or no enemy
 		if not text_mode and (info[5]==0 or #enemies==0) then
 		 if type(info[1])=="function" then
@@ -330,10 +370,61 @@ function draw_bosslife()
 		end
  end
 end
+
+--bullets + explosions
+
+function shoot(bullet,x,y)
+ local b={}
+ --recopier la table originelle
+ for j,k in pairs(bullet) do
+  b[j] = k
+ end
+ b.x=p.x+x
+ b.y=p.y+y
+ add(bullets,b)
+ sfx(bullet.sfx)
+end
+
+function update_bullets()
+	for b in all(bullets) do
+		b.y-=b.speed
+		b.duration-=1
+		if (b.duration==0) del(bullets,b)
+	end
+	for b in all(e_bullets) do
+		b.y+=b.dy*b.speed
+		b.x+=b.dx*b.speed
+		if b.y>130 or b.y<-10
+		or b.x>130 or b.x<-10 then
+		 del(e_bullets,b)
+	 end
+	end
+end
+
+function explode(x,y)
+ add(explosions,{
+  x=x,
+  y=y,
+  t=0})
+end
+
+function update_explosions()
+ for e in all(explosions) do
+  e.t+=1
+ 	if (e.t==13) del(explosions,e)
+ end
+end
 -->8
 --database
 
 function init_database()
+ --stage,difficulty,target,proximity
+	threats={
+	 {2,"low",2,1},
+	 {3,"medium",1,1},
+	 {4,"high",1,2},
+	 {5,"extreme",1,3}
+	}
  --equipment chosen
  --ship, weapon, secondary
  eqp={1,1,1}
@@ -350,14 +441,15 @@ function init_database()
   {
    speed=1.2,
    life=4,
-   price=2000,
+   price=2090,
    anim={18},
    x1=7,y1=7,
    w=1,h=1
   },
   {
 	  speed=1.2,
-   life=3,
+   life=5,
+   price=9930,
    anim={16},
    x1=7,y1=9,
    w=1,h=2
@@ -369,7 +461,7 @@ function init_database()
    speed=4,
    frequency=8,
    duration=35,
-   damage=100,
+   damage=10,
    sfx=0,
    anim={31},
    x1=2,y1=2,
@@ -380,18 +472,18 @@ function init_database()
    speed=3,
    frequency=8,
    duration=25,
-   damage=100,
+   damage=15,
    sfx=13,
    anim={30},
    x1=0,y1=1,
    w=6,h=6
   },
   {
-   price=3000,
+   price=5990,
    speed=3,
    frequency=8,
    duration=25,
-   damage=100,
+   damage=20,
    sfx=13,
    anim={29},
    x1=1,y1=0,
@@ -404,27 +496,29 @@ function init_database()
    speed=3.5,
    frequency=12,
    duration=16,
-   damage=200,
+   damage=20,
    sfx=13,
    anim={47},
    x1=2,y1=2,
    w=3,h=3
   },
   {
+   price=6200,
    speed=4,
    frequency=20,
    duration=35,
-   damage=300,
+   damage=60,
    sfx=13,
    anim={46},
    x1=2,y1=0,
    w=3,h=7
   },
   {
+   price=14700,
    speed=3,
    frequency=6,
    duration=13,
-   damage=300,
+   damage=30,
    sfx=13,
    anim={45},
    x1=0,y1=0,
@@ -435,7 +529,7 @@ function init_database()
  enemy={
   {
    --little guy
-	  life=400,
+	  life=60,
 	  money=20,
    anim={1},
    spr_w=1,spr_h=1,
@@ -446,7 +540,7 @@ function init_database()
   },
   {
    --tunnel guy
-	  life=800,
+	  life=140,
 	  money=120,
    anim={4},
    spr_w=2,spr_h=1,
@@ -459,7 +553,7 @@ function init_database()
   },
   {
    --wheel guy
-	  life=800,
+	  life=180,
 	  money=120,
    anim={2},
    spr_w=1,spr_h=1,
@@ -470,7 +564,7 @@ function init_database()
   },
   {
    --big vertical laser guy
-	  life=1500,
+	  life=240,
 	  y_goal=20,
 	  money=140,
    anim={6},
@@ -486,7 +580,7 @@ function init_database()
   },
   {
    --horizontal laser guy
-	  life=1500,
+	  life=180,
 	  following=true,
 	  lifespan=280,
 	  canflip=true,
@@ -502,7 +596,7 @@ function init_database()
   {
    --giga boss
    boss=true,
-	  life=20000,
+	  life=2000,
 	  money=10000,
    anim={128},
    spr_w=16,spr_h=4,
@@ -513,7 +607,19 @@ function init_database()
     {6,96,6},
     {5,34,16}
    }
-  }
+  },
+  {
+   --following tunnel guy
+	  life=140,
+	  money=120,
+   anim={4},
+   spr_w=2,spr_h=1,
+   x1=0,y1=0,w=15,h=7,
+   emitters={
+    {9,0,2},
+    {10,8,2}
+   }
+  },
  }
  --bullet emitters
  emitter={
@@ -614,6 +720,36 @@ function init_database()
 		   end
 	   end
    end
+  },
+  {
+   --wave tunnel follow side1
+   bullet=2,
+   frequency=4,
+   speed=1.5,
+   repeats=1,
+   angle=function (rpt,emt,e)
+    if flr(emt.pattern_t)%4==0 then
+     --reprend pos. joueur
+     e.base_a=angle_to(e.x+emt[2],e.y+emt[3],p.x+p.x1-2,p.y+p.y1-2)
+    end
+    emt.pattern_t+=0.1
+    if flr(emt.pattern_t)%4~=0 then
+	    return e.base_a+0.04+sin(emt.pattern_t)/50
+	   end
+   end
+  },
+  {
+   --wave tunnel follow side2
+   bullet=2,
+   frequency=4,
+   speed=1.5,
+   repeats=1,
+   angle=function (rpt,emt,e)
+    emt.pattern_t+=0.1
+    if flr(emt.pattern_t)%4~=0 then
+	    return e.base_a-(0.04-sin(emt.pattern_t)/50)
+	   end
+   end
   }
  }
  bullet={
@@ -650,7 +786,24 @@ function init_database()
  --(none=wait until 0 enemy)
  stages={
   {
-   --{"interessant.","enfin, y a pas de quoi etre fier non plus,","mais c'est pas mal."},
+   --1-introduction
+   {"alors, la petite jeune.","premiere mission sur le terrain ?","tu verras, ceux-la sont un peu lents.","ca devrait bien se passer.","oublie pas de leur tirer dessus quand meme.","c'est ❎. voili voilou."},
+   {1,1,30,1},
+   {1,1,-20,1},
+   {3,1,80,1},
+   {"pas mal.","enfin, y a pas de quoi etre fier non plus,","mais c'est pas mal.","y en a d'autres qui arrivent.","plein de petits points rouges."},
+   {2,1,60,2},
+   {4,1,100,3,6},
+   {2,1,80,1,6},
+   {1,1,8,1,6},
+   {"ah ben, je vois deja plus personne.","c'etait du bon travail.","alors euh, bienvenue dans la brigade.","tu peux rentrer, il faut que tu dises bonjour au colonel."},
+   {function()
+	   _upd=update_map
+	   _drw=draw_map
+	   init_map()
+   end}
+  },
+  {
    --{1,4,-40,4},
    --{1,1,80,2,1},
    --{1,1,-80,3,1},
@@ -660,6 +813,7 @@ function init_database()
    --end},
    --{1,3,40,1},
    --{1,2,0,1},
+   {1,7,60,1},
    {1,5,128,5},
    {1,5,-96,5},
    {1,2,30,1},
@@ -913,48 +1067,159 @@ function enemy_shoot(x,y,a,em)
 	})
 end
 -->8
---bullets + explosions
+--scene map
 
-function shoot(bullet,x,y)
- local b={}
- --recopier la table originelle
- for j,k in pairs(bullet) do
-  b[j] = k
- end
- b.x=p.x+x
- b.y=p.y+y
- add(bullets,b)
- sfx(bullet.sfx)
+function init_map()
+	blink_t=0
+	map_index=1
+	trans_t=-30
 end
 
-function update_bullets()
-	for b in all(bullets) do
-		b.y-=b.speed
-		b.duration-=1
-		if (b.duration==0) del(bullets,b)
+function update_map()
+	if btnp⬆️ then
+	 map_index=max(1,map_index-1)
+	 blink_t=0
 	end
-	for b in all(e_bullets) do
-		b.y+=b.dy*b.speed
-		b.x+=b.dx*b.speed
-		if b.y>130 or b.y<-10
-		or b.x>130 or b.x<-10 then
-		 del(e_bullets,b)
-	 end
+	if btnp⬇️ then
+		map_index=min(#cur_threats,map_index+1)
+	 blink_t=0
 	end
-end
-
-function explode(x,y)
- add(explosions,{
-  x=x,
-  y=y,
-  t=0})
-end
-
-function update_explosions()
- for e in all(explosions) do
-  e.t+=1
- 	if (e.t==13) del(explosions,e)
+	if btnp❎ then
+	 stage=cur_threats[map_index]
+	 _upd=update_shop
+  _drw=draw_shop
+  init_shop()
+	end
+	
+	blink_t+=0.05
+	
+	if first_time_map and trans_t>110 then
+	 local t={"ah c'est elle la nouvelle ?","bon, ben.","salut l'artiste !","bienvenue dans la brigade de surveillance de new miami.","alors comme ca on aime bien dezinguer des aliens ?","...","oui. bon. alors. la mission.","ca c'est l'ecran de controle de la zone a-1."}
+	 for i in all(t) do
+	 	dtb_disp(i)
+  end
+  dtb_disp("c'est nous. on s'occupe des trois tours de surveillance.",function() add(cur_threats,1) end)
+	 local t={"les points rouges, c'est les aliens.","s'ils s'approchent, c'est chiant.","ca tire partout, y a du sang, faut refaire la peinture.","donc quand tu vois des points rouges","si tu pouvais aller tirer sur tout le monde","ce serait nickel.","eh ben, je crois qu'on a fait le tour.","bonne continuation."}
+	 for i in all(t) do
+	 	dtb_disp(i)
+  end
+  first_time_map=false
  end
+ 
+ if trans_t==110 and not first_time_map then
+  dtb_disp("une menace a ete supprimee, bien joue.",next_turn())
+ end
+ 
+ trans_t+=1
+end
+
+function next_turn()
+ dtb_disp("ajouter qqch ici.")
+end
+
+function draw_map()
+ if trans_t<0 then
+  cls(11)
+ else
+	 cls(3)
+	end
+	if trans_t>30 and trans_t<40 then
+	 circfill(120,120,64,11)
+	end
+	if trans_t>39 and trans_t<50 then
+	 circfill(120,120,100,11)
+	 circfill(120,120,64,3)
+	end
+	if trans_t>49 and trans_t<60 then
+	 cls(11)
+	 circfill(120,120,100,3)
+	end
+	if trans_t>39 then
+		circ(120,120,64,11)
+		circ(120,120,100)
+		line(50,50,120,120)
+		line(80,30,120,120)
+		line(30,80,120,120)
+	end
+	
+	--watchtowers
+	if (trans_t>60) spr(48,58,90)
+	if (trans_t>64) spr(48,72,70)
+	if (trans_t>68) spr(48,90,57)
+	
+	if (trans_t>80 and trans_t<84) or trans_t>86 then
+		local t="watchtowers"
+		print(t,13,98,5)
+		print(t,12,98,5)
+		print(t,12,97,6)
+	end
+	
+	if (trans_t>5 and trans_t<9) or trans_t>12 then
+		--miami station
+		local t="new miami\n  station"
+		spr(192,89,89,4,4)
+		print(t,53,108,5)
+		print(t,52,108,5)
+		print(t,52,107,6)
+	end
+	
+	if trans_t>110 then
+		local i=1
+		for cur_t in all(cur_threats) do
+		 --red circle
+			local position={
+			 --tower1
+			 {{30,80},{43,85},{55,91}},
+			 --tower2
+			 {{50,50},{60,60},{70,70}},
+			 --tower3
+			 {{80,30},{86,43},{91,55}}
+			}
+			local t=threats[cur_t]
+			local x=position[t[3]][t[4]][1]
+			local y=position[t[3]][t[4]][2]
+			circfill(x,y,2,8)
+			
+			--menus
+			rectfill(11,3+8*i,40,8+8*i,0)
+			
+			if map_index==cur_t then
+			 rectfill(11,3+8*i,40,8+8*i,5)
+			 if flr(blink_t)%2==0 then
+			  circfill(x,y,2,9)
+			 end
+			 local x=88
+			 local y=11
+				rectfill(x,y,x+28,y+23,0)
+				print("danger:\n"..t[2].."\ntarget:\ntower"..t[3],x+1,y+1,11)
+			end
+			
+			print("threat"..i,12,4+8*i,11)
+			
+			i+=1
+		end
+		--danger
+		print(threats[1][2],50,1,6)
+
+ end
+ if trans_t>0 and trans_t<30 then
+  glitch(0,0,128,128)
+ end
+ 
+ frame_borders()
+end
+
+function frame_borders()
+	--frame corners
+ spr(49,0,0)
+ spr(49,120,0,1,1,true)
+ spr(49,0,120,1,1,false,true)
+ spr(49,120,120,1,1,true,true)
+ --frame borders
+ sspr(16,24,8,8,8,0,112,8)
+ sspr(16,24,8,8,8,120,112,8,false,true)
+ sspr(24,24,8,8,0,8,8,112)
+ sspr(24,24,8,8,120,8,8,112,true)
 end
 -->8
 --tools
@@ -1137,8 +1402,8 @@ function dtb_update()
 end
 
 function dtb_draw()
- rectfill(dtb_y*2-139,dtb_y-43,128,128,2)
- spr(77,dtb_y*2-138,dtb_y-42,3,4)
+ rectfill(dtb_y*2-139,dtb_y-44,128,128,2)
+ spr(77,dtb_y*2-138,dtb_y-43,3,4)
  rectfill(0,dtb_y-11,127,128,2)
  rectfill(0,dtb_y-10,127,128,0)
 	if #dtb_queu>0 then
@@ -1151,19 +1416,19 @@ function dtb_draw()
 			print(dtb_dislines[i],2,i*8+dtb_y-(dislineslength+offset)*8,7)
 		end
 	end
-	glitch()
+	glitch(dtb_y*2-138,dtb_y-43,24,32)
 end
 
 --glitch effect
 
-function glitch()
+function glitch(x,y,w,h)
  if g_on == true then -- on boolean is mangaged by the timer
   local t={6,11,3} -- three colors
   local c=flr(rnd(3))+1
   for i=0, 5, 4 do -- the outer loop generates the vertical glitch dots
-   local gl_height = rnd(glit.height)
+   local height = rnd(h)
    for h=0, 100, 2 do -- the inner loop creates longer horizontal lines
-    pset(dtb_y*2-138+rnd(glit.width),dtb_y-42+gl_height, t[c])
+    pset(x+rnd(w),y+height, t[c])
    end
   end
  end
@@ -1258,14 +1523,14 @@ __gfx__
 16766711117776617aaa50000007aaa50e2222eee22222220e22e000000e22e0000e22e00e22e00000000000000000000000000089aaa9800089980000888000
 0111111111111110655550000006555500eeee000e22222e00e2e000000e2e000000e2e00e2e0000000000000000000000000000089a98000088880000080000
 000000000000000000000000000000000000000000eeeee0000ee000000ee00000000ee00ee00000000000000000000000000000008880000008800000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000770006666666666666666666675d0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+007666006666666666666666666675d0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+007636006666666666666666666675d0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+057636506666666666666666666675d0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+507666056666666777777777666675d0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+055555506666667555555555666675d0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+007636006666675ddddddddd666675d0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00066000666675d000000000666675d0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 cc0000007c000000770000008700000088000000880000007800000077000000c700000000000000ccccccccccccccccccccccccbbbbb3333333333333333333
 cc000000cc0000007c00000077000000870000008800000088000000780000007700000000000000cccccccccccccc1111ccccccbbbb33333333333333333333
 00000000000000000000000000000000000000000000000000000000000000000000000000000000cccccccc1111111cccccccccbbb333333333333333333333
@@ -1330,6 +1595,38 @@ cc000000cc0000007c00000077000000870000008800000088000000780000007700000000000000
 00000000000000000000000000000000000000000000000000005555000055550000000000000000000000000555550000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000550000000000000000000000000000000000555550000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000550000000000000000000000000000000000555550000000000000000000000000000000000
+00000000000000000000000000777777000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000007777777777000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000007777777777766000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000777777777766666000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000777777777766666666000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000077777777766666666666000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000777777776666666666666000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000007777777666666666666666000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000077777776666666666666666000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000777777666666666666666666000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000007777776666666666666666666000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000077777766666666666666666666000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000077777666666666666666666666000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000777776666666666666666666666000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000777776666666666666666666666000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00007777766666666666666666666666000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00007777766666666666666666666666000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00077777666666666666666666666666000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00077777666666666666666666666666000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00077777666666666666666666666666000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00777776666666666666666666666666000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00777776666666666666666666666666000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+07777766666666666666666666666666000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+07777766666666666666666666666666000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+07777766666666666666666666666666000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+07777666666666666666666666666666000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+77777666666666666666666666666666000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+77777666666666666666666666666666000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+77776666666666666666666666666666000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+77776666666666666666666666666666000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+77776666666666666666666666666666000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+77766666666666666666666666666666000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 __sfx__
 00020000325302d5302853025520205201e520165101051007510215002750032500075000550004500035000350003500075000e500135000050000500005000050000500005000050000500005000050000500
 000300002a620276201c62014620106100f6100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
