@@ -5,10 +5,10 @@ __lua__
 --surveillance brigade operations
 
 function _init()
- palette()
  first_time_map=true
  cur_threats={}
  stage=0
+ turn=0
  --particles
  dust,dust_front={},{}
  dust_col={5,9,9,10}
@@ -20,7 +20,8 @@ function _init()
  dtb_init()
  
  title_t=0
- 
+ dep_mes_i=1
+ max_shield_fill=1600
  offset=0
  t=0
  money=10000
@@ -30,13 +31,9 @@ function _init()
  a=0
  
  --state
- init_shmup()
- _upd=update_shmup
- _drw=draw_shmup
-end
-
-function palette()
-	pal({1,1,5,5,5,6,7,13,6,7,7,6,13,6,7}, 0)
+ init_map()
+ _upd=update_map
+ _drw=draw_map
 end
 
 --scene gameover
@@ -71,10 +68,10 @@ end
 function draw_money()
  if money_printed<money-15 then
   money_printed+=15
-	 print_money(10)
+	 print_money(7)
  elseif money_printed<money then
   money_printed+=1
-	 print_money(10)
+	 print_money(7)
  elseif money_printed>money+55 then
   money_printed-=55
 	 print_money(8)
@@ -82,12 +79,12 @@ function draw_money()
   money_printed-=1
 	 print_money(8)
  else
-  print_money(9)
+  print_money(12)
  end
 end
 
 function print_money(col)
-	print("$"..money_printed,100,1,col)
+	print("$"..money_printed,101,4,col)
 end
 
 --input manager
@@ -163,8 +160,19 @@ function update_shop()
     sfx(1)
    end
   else
-   dtb_disp("et c'est parti.",function()
-	   init_shmup()
+   --messages et depart
+   local mes=deploy_messages[dep_mes_i]
+   local nb_mes=#mes
+   local i=1
+   if nb_mes>1 then
+    for j=1,nb_mes-1 do
+     dtb_disp(mes[i])
+     i+=1
+    end
+   end
+   dtb_disp(mes[i],function()
+	   dep_mes_i+=1
+				init_shmup()
 	   _upd=update_shmup
 	   _drw=draw_shmup
    end)
@@ -217,7 +225,7 @@ function draw_shop()
  end
  if trans_t>13 then
   rectfill(11,11,40,16,0)
-	 print("stage"..stage,12,12,11)
+	 print("threat"..map_index,12,12,11)
 	 rectfill(89,11,117,16,0)
 	 print("$"..money,90,12,11)
 	end
@@ -298,7 +306,7 @@ function wave_manager()
 	 update_title()
 	elseif wave==0 then
 	 update_stage_start()
-	elseif not text_mode and wave==#stages[stage]+1 then
+	elseif not text_mode and wave==#stages[stage]+1 and #enemies==0 then
 		init_bubble()
 		wave+=1
 	elseif wave<=#stages[stage] then
@@ -384,10 +392,26 @@ function draw_shmup()
 	if stage==0 then
 	 draw_title()
 	elseif stage>1 then
-	 for i=1,p.life do
-		 spr(80,i*8,1)
-		 draw_money()
+	 local i=1
+	 for j=1,p.shield do
+	  rectfill(-11+i*14,5,3+i*14,7,12)
+	  i+=1
 	 end
+	 if shield_fill>10 then
+	  local col=12
+	  if flr(shield_fill)%9<5 then
+	   col=7
+	  end
+	 	rectfill(-11+i*14,5,-11+i*14+(13*shield_fill/max_shield_fill),7,col)
+  end
+  rectfill(4,5,29,5,5)
+	 rectfill(4,4,4+8.7*p.life,5,6)
+	 palt(11, true)
+	 palt(0, false)
+	 spr(82,1,0,4,2)
+	 palt()
+	 --money
+	 draw_money()
 	end
 	draw_bosslife()
 	draw_notif(notif_text,notif_t)
@@ -458,11 +482,21 @@ end
 function init_database()
  --stage,difficulty,target,proximity
 	threats={
-	 {2,"low",2,1},
-	 {3,"medium",1,1},
-	 {4,"high",1,2},
-	 {5,"extreme",1,3}
+		{2,"low",2,1},
+		{3,"low",1,1},
+		{4,"medium",3,1},
+		{5,"medium",2,1}
 	}
+	deploy_messages={
+	 {"oh, avant que j'oublie, petit conseil.","seul le gyrophare de votre vaisseau est vulnerable.","en fait,","ca pourrait meme vous aider de froler les balles avec le reste du vaisseau.","pensez-y quand vous etes en rade de bouclier.","y a pas de honte, ca peut arriver.","allez, bonne chasse."},
+  {"et c'est parti."},
+  {"vous savez, y a un truc special chez vous.","vous etes peut-etre un peu maladroite des fois","mais vous y mettez du coeur.","on voit pas ca chez tout le monde.","alors, quoi qu'il arrive, vous allez vous en sortir dans la vie.","si vous y croyez pas, j'y croirai pour vous.","bon vent, ma petite."},
+  {"mettez-leur une raclee."},
+  {"vous commencez a etre a l'aise ?","pas trop hein","c'est le metier qui rentre.","bientot on croira que vous avez fait ca toute votre vie.","oubliez pas d'attacher votre ceinture."},
+  {"jeune fille.","vous alliez partir sans me prevenir ?","vous savez, je vous regarde toujours dans le radar.","faudrait pas qu'il vous arrive quelque chose.","alors passez me voir, la prochaine fois."},
+  {"tiens donc, ma recrue preferee.","heu, le dites pas aux autres.","vous savez, je voulais pas etre affecte ici","ma famille est a fortune iii","alors les journees sont longues","mais vous","...","ah, je sais pas.","faites comme si j'avais rien dit, va.","bonne route, soldat.","vous allez les degommer."},
+  {"c'est parti."}
+ }
  --equipment chosen
  --ship, weapon, secondary
  eqp={1,1,1}
@@ -471,6 +505,7 @@ function init_database()
 	 {
 	  speed=1.2,
    life=3,
+   shield=2,
    anim={16},
    x1=7,y1=9,
    w=1,h=2,
@@ -479,6 +514,7 @@ function init_database()
   {
    speed=1.2,
    life=4,
+   shield=2,
    price=2090,
    anim={18},
    x1=7,y1=7,
@@ -487,6 +523,7 @@ function init_database()
   {
 	  speed=1.2,
    life=5,
+   shield=2,
    price=9930,
    anim={16},
    x1=7,y1=9,
@@ -586,7 +623,7 @@ function init_database()
    emitters={
     {3,0,2},
     {4,8,2},
-    {1,4,0}
+    {2,4,0}
    }
   },
   {
@@ -688,9 +725,9 @@ function init_database()
    speed=1.5,
    repeats=1,
    angle=function (rpt,emt)
-    emt.pattern_t+=0.1
+    emt.pattern_t+=0.05
     if flr(emt.pattern_t)%4~=2 then
-	    return 0.25+0.06+sin(emt.pattern_t)/50
+	    return 0.25+0.04+sin(emt.pattern_t+0.25)/50
 	   end
    end
   },
@@ -701,9 +738,9 @@ function init_database()
    speed=1.5,
    repeats=1,
    angle=function (rpt,emt)
-    emt.pattern_t+=0.1
+    emt.pattern_t+=0.05
     if flr(emt.pattern_t)%4~=2 then
-	    return 0.25-(0.06+sin(emt.pattern_t)/50)
+	    return 0.25-(0.04+sin(emt.pattern_t+0.25)/50)
 	   end
    end
   },
@@ -788,7 +825,17 @@ function init_database()
 	    return e.base_a-(0.04-sin(emt.pattern_t)/50)
 	   end
    end
-  }
+  },
+  {
+	--little follow
+	bullet=1,
+	frequency=40,
+	speed=1.6,
+	repeats=1,
+	angle=function (rpt,emt,e)
+	 return angle_to(e.x+emt[2],e.y+emt[3],p.x+p.x1-2,p.y+p.y1-2)
+	end
+   }
  }
  bullet={
   {
@@ -829,7 +876,7 @@ function init_database()
    {1,1,30,1},
    {1,1,-20,1},
    {3,1,80,1},
-   {"pas mal.","enfin, y a pas de quoi etre fier non plus,","mais c'est pas mal.","y en a d'autres qui arrivent.","plein de petits points rouges."},
+   {"pas mal.","enfin, y a pas de quoi etre fiere non plus,","mais c'est pas mal.","y en a d'autres qui arrivent.","plein de petits points rouges."},
    {2,1,60,2},
    {3,1,100,3},
    {2,1,80,1},
@@ -837,15 +884,28 @@ function init_database()
    {"ah ben, je vois deja plus personne.","c'etait du bon travail.","alors euh, bienvenue dans la brigade.","tu peux rentrer, il faut que tu dises bonjour au colonel."}
   },
   {
-   --{1,4,-40,4},
-   --{1,1,80,2,1},
-   --{1,1,-80,3,1},
-   --{function()
-	   --_upd=update_shop
-	   --_drw=draw_shop
-   --end},
-   --{1,3,40,1},
-   --{1,2,0,1},
+	--level-1
+	{2,1,60,1},
+	{3,1,80,1},
+	{2,1,40,1},
+	{3,1,90,6,10},
+	{1,2,50,1},
+	{1,2,-40,1,120},
+	{1,2,30,1},
+	{1,1,98,2,1},
+	{1,1,-40,3,20},
+	{3,1,90,7},
+	{2,1,70,1,180},
+	{1,1,8,8,10},
+	{2,1,80,6},
+	{1,2,8,1,100},
+	{2,1,60,9,60},
+	{1,2,8,1},
+  },
+  {
+   {1,4,-40,4},
+   {1,1,80,2,1},
+   {1,1,-80,3,1},
    {1,7,60,1},
    {1,5,128,5},
    {1,5,-96,5},
@@ -856,6 +916,14 @@ function init_database()
    {4,1,60,2},
    {2,2,70,2},
    {3,2,98,2}
+  },
+  {
+	--exemple de swarm de petits ennemis
+   {4,1,90,2},
+   {2,1,60,7,60},
+   {2,1,40,2},
+   {3,1,60,7,120},
+   {3,1,90,8,80},
   },
   {
    {1,6,128,4}
@@ -878,6 +946,7 @@ function init_player()
  p.wep1_t_max=weapon[eqp[2]].frequency
  p.wep2_t=0
  p.wep2_t_max=secondary[eqp[3]].frequency
+ shield_fill=0
 end
 
 function update_player()
@@ -922,7 +991,13 @@ function update_player()
 		if collision(b,p) and
 		not p.invincible and
 		not text_mode then
-			if (stage~=1) p.life-=1
+			if stage~=1 then
+				if p.shield>0 then
+				 p.shield-=1
+				else
+				 p.life-=1
+				end
+			end
 			p.invincible=true
 			explode(b.x+4,b.y+4)
 			del(e_bullets,b)
@@ -939,6 +1014,15 @@ function update_player()
 	else
 	 p.inv_t=0
 	 p.invincible=false
+	end
+	if p.shield<ship[eqp[1]].shield then
+	 shield_fill+=1
+	else
+	 shield_fill=0
+	end
+	if shield_fill>=max_shield_fill then
+	 p.shield+=1
+	 shield_fill=0
 	end
  player_dust(8,14)
 end
@@ -977,14 +1061,14 @@ function spawn_enemies(amount,enemy,width,behaviour)
 	  e.move_duration=60
 	 elseif behaviour==2 then
 	  --coming from the left
-	  e.x=-80+i*20
+	  e.x=-80-10*amount+i*20
 	  e.x_change=flr((128-width)/2)+8*(i-1)+gap*(i-1)-e.x
 	  e.y=10
 	  e.y_change=20
 	  e.move_duration=150+rnd(40)
 	 elseif behaviour==3 then
 	  --coming from the right
-	  e.x=208-i*20
+	  e.x=140+i*40
 	  e.x_change=flr((128-width)/2)+8*(i-1)+gap*(i-1)-e.x
 	  e.y=10
 	  e.y_change=20
@@ -1002,6 +1086,34 @@ function spawn_enemies(amount,enemy,width,behaviour)
 	  e.y=-16
 	  e.y_change=p.y+10
 	  e.move_duration=200
+	 elseif behaviour==6 then
+	  --coming from the left down
+	  e.x=-80-10*amount+i*20
+	  e.x_change=flr((128-width)/2)+8*(i-1)+gap*(i-1)-e.x
+	  e.y=25
+	  e.y_change=20
+	  e.move_duration=150+rnd(40)
+	 elseif behaviour==7 then
+	  --coming from the right down
+	  e.x=140+i*40
+	  e.x_change=flr((128-width)/2)+8*(i-1)+gap*(i-1)-e.x
+	  e.y=25
+	  e.y_change=20
+	  e.move_duration=150+rnd(40)
+	 elseif behaviour==8 then
+	  --coming from the left up
+	  e.x=-80-10*amount+i*20
+	  e.x_change=flr((128-width)/2)+8*(i-1)+gap*(i-1)-e.x
+	  e.y=-5
+	  e.y_change=20
+	  e.move_duration=150+rnd(40)
+	 elseif behaviour==9 then
+	  --coming from the right up
+	  e.x=140+i*40
+	  e.x_change=flr((128-width)/2)+8*(i-1)+gap*(i-1)-e.x
+	  e.y=-5
+	  e.y_change=20
+	  e.move_duration=150+rnd(40)
 	 end
 	 e.start_x,e.start_y=e.x,e.y
 	 --timers
@@ -1112,10 +1224,11 @@ function init_map()
 	blink_t=0
 	map_index=1
 	trans_t=-30
+	processed=1--tout sauf 0
 end
 
 function update_map()
- if trans_t==160 then
+ if trans_t>160 then
 		if btnp⬆️ then
 		 map_index=max(1,map_index-1)
 		 blink_t=0
@@ -1125,7 +1238,7 @@ function update_map()
 		 blink_t=0
 		end
 		if btnp❎ then
-		 stage=cur_threats[map_index]
+		 stage=threats[cur_threats[map_index]][1]
 		 _upd=update_shop
 	  _drw=draw_shop
 	  init_shop()
@@ -1134,29 +1247,72 @@ function update_map()
 	
 	blink_t+=0.05
 	
-	if first_time_map and trans_t>130 then
+	if first_time_map and trans_t==140 then
 	 local t={"ah c'est elle la nouvelle ?","bon, ben.","salut l'artiste !","bienvenue dans la brigade de surveillance de new miami.","alors comme ca on aime bien dezinguer des aliens ?","...","oui. bon. alors. la mission.","ca c'est l'ecran de controle de la zone a-1."}
 	 for i in all(t) do
 	 	dtb_disp(i)
   end
   dtb_disp("c'est nous. on s'occupe des trois tours de surveillance.",function() add(cur_threats,1) end)
-	 local t={"les points rouges, c'est les aliens.","s'ils s'approchent, c'est chiant.","ca tire partout, y a du sang, faut refaire la peinture.","donc quand tu vois des points rouges","si tu pouvais aller tirer sur tout le monde","ce serait nickel.","eh ben, je crois qu'on a fait le tour.","bonne continuation."}
+	 local t={"les points rouges, c'est les aliens.","s'ils s'approchent, c'est chiant.","ca tire partout, y a du sang, faut refaire la peinture.","donc quand tu vois des points rouges","si tu pouvais aller tirer sur tout le monde","ce serait nickel.","eh ben, je crois qu'on a fait le tour."}
 	 for i in all(t) do
-	 	dtb_disp(i)
+		 dtb_disp(i)
   end
-  first_time_map=false
+  dtb_disp("bonne continuation.",function() first_time_map=false end)
  end
  
  if trans_t==160 and not first_time_map then
   next_turn()
  end
  
+ if processed==0 and not first_time_map then
+ 	create_threats()
+ 	processed=false
+ end
+ 
  trans_t+=1
 end
 
 function next_turn()
- dtb_disp("une menace a ete supprimee, bien joue.")
- dtb_disp("ajouter qqch ici.")
+ processed=#cur_threats
+ for i in all(cur_threats) do
+ 	if stage==threats[i][1] then
+ 		if not got_game_over then
+    del(cur_threats,i)
+ 			dtb_disp("une menace a ete eradiquee, beau travail.",function() processed-=1 end)
+			else
+			 threat_progress(i)
+			end
+		else
+		 threat_progress(i)
+		end
+ end
+end
+
+function threat_progress(i)
+	threats[i][4]=min(3,threats[i][4]+1)
+ if threats[i][4]==3 then
+ 	dtb_disp("la tour "..threats[i][3].."est attaquee !",function() processed-=1 end)
+ else
+  dtb_disp("hmm, les aliens progressent...",function() processed-=1 end)
+ end
+end
+
+function create_threats()
+ turn+=1
+	if turn==1 then
+		add(cur_threats,2)
+		add(cur_threats,3)
+		local text={"ah, y a d'autres missions pour vous.","vous savez, j'ai foi en vous.","je vais vous regarder faire d'ici."}
+		for t in all(text) do
+			dtb_disp(t)
+		end
+	elseif turn==3 then
+	 add(cur_threats,4)
+	 local text={"la tour 3 a detecte quelque chose !","faites attention, ca a l'air d'etre du serieux.","revenez-nous en bon etat !"}
+		for t in all(text) do
+			dtb_disp(t)
+		end
+	end
 end
 
 function draw_map()
@@ -1225,7 +1381,7 @@ function draw_map()
 			--menus
 			rectfill(11,3+8*i,40,8+8*i,0)
 			
-			if map_index==cur_t then
+			if map_index==i then
 			 rectfill(11,3+8*i,40,8+8*i,5)
 			 if flr(blink_t)%2==0 then
 			  circfill(x,y,2,9)
@@ -1313,7 +1469,7 @@ function draw_notif(text,timer)
    --line(127,64,127-d*4,64,2)
   else
    rectfill(0,64-h,127,64+h,0)
-   rect(-1,64-h-1,128,64+h+1,2)
+   rect(-1,64-h-1,128,64+h+1,13)
   end
   if h>=2 then
    x1=100-(timer*0.5)
@@ -1660,22 +1816,22 @@ cc000000cc0000007c00000077000000870000008800000088000000780000007700000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000ccccc1ccccccccccccccccccbb333bbbbbbbbb3333333333
 00000000000000000000000000000000000000000000000000000000000000000000000000000000ccccc1ccccccccccccccccccbb33bbbbbbbbbbb333333333
 00000000000000000000000000000000000000000000000000000000000000000000000000000000ccccc1ccccccccccccccccccbb3bbbbbbbbbbbbb33333333
-01111110000000000000000000000000000000000000000000000000000000000000000000000000ccccc11cccccccccccccccccbb3bbb33333bbbb333333333
-16677661000000000000000000000000000000000000000000000000000000000000000000000000cccccc111cccccccc11cccccbb3bb33bbb3bb33bb3333333
-16677761000000000000000000000000000000000000000000000000000000000000000000000000ccccc111111111111111ccccbb3bb3bbbb3b33bbbb333333
-17667771000000000000000000000000000000000000000000000000000000000000000000000000ccccc111111111111111c11cbb3bb3bbbb3b3bbbbb333333
-17777671000000000000000000000000000000000000000000000000000000000000000000000000ccccc111111111111111c11cbb33bb3bbb3b33bbbb333333
-01776610000000000000000000000000000000000000000000000000000000000000000000000000ccccc111111111111111cc1cbb33bb33333bb33b33333333
-00166100000000000000000000000000000000000000000000000000000000000000000000000000ccccc111111111111111cc1cbb33bbb333bbb33333b33333
-00011000000000000000000000000000000000000000000000000000000000000000000000000000ccccc11111111111111ccc1cbb33bbbbbbbbbbb33bb33333
-00000000000000000000000000000000000000000000000000000000000000000000000000000000ccccc1ccccc1cccccccccc1cbb33bbbb333333bbbbb33333
-00000000000000000000000000000000000000000000000000000000000000000000000000000000ccccc1cccc1ccccccccccc1cbb33bbbb3333b33bbbb33333
-00000000000000000000000000000000000000000000000000000000000000000000000000000000ccccc1cccc1ccccccccc111cbb333bbb33bbbb3bbbb33333
-00000000000000000000000000000000000000000000000000000000000000000000000000000000ccccc1cccc1ccccccccc1cccbb3b3bbb333bb33bbbb33333
-00000000000000000000000000000000000000000000000000000000000000000000000000000000ccccc1cccc111cccccccccccbb3b3bb33b3b3bbbbbb33333
-00000000000000000000000000000000000000000000000000000000000000000000000000000000ccccc1ccccccccccccccccccbb3333b3bbb33bbbbbb33333
-00000000000000000000000000000000000000000000000000000000000000000000000000000000ccccc1ccccccccccccccccccb33333b333bb3bbbbbb33333
-00000000000000000000000000000000000000000000000000000000000000000000000000000000ccccc1ccccc1111ccccc1ccc33333333bb3b3bbbbb333333
+b000000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb00000000000000000000000000000000ccccc11cccccccccccccccccbb3bbb33333bbbb333333333
+06677660bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb00000000000000000000000000000000cccccc111cccccccc11cccccbb3bb33bbb3bb33bb3333333
+06677760bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb00000000000000000000000000000000ccccc111111111111111ccccbb3bb3bbbb3b33bbbb333333
+07667770bbbbbbbbbbbb11111111111111111111111111bb00000000000000000000000000000000ccccc111111111111111c11cbb3bb3bbbb3b3bbbbb333333
+07777670bbbbbbbbbbb1bbbbbbbb1bbbbbbbb1bbbbbbbb1b00000000000000000000000000000000ccccc111111111111111c11cbb33bb3bbb3b33bbbb333333
+b077660bbbbbbbbbbb1bbbbbbbb1bbbbbbbb1bbbbbbbb1b100000000000000000000000000000000ccccc111111111111111cc1cbb33bb33333bb33b33333333
+bb0660bbbbbbbbbbbb111111111111111111111111111b1100000000000000000000000000000000ccccc111111111111111cc1cbb33bbb333bbb33333b33333
+bbb00bbbbbbbbbbbb1bbbbbbbbbbbbbb1bbbbbbbbbbbb11b00000000000000000000000000000000ccccc11111111111111ccc1cbb33bbbbbbbbbbb33bb33333
+bbbbbbbbbbbbbbbbbb1111111111111111111111111111bb00000000000000000000000000000000ccccc1ccccc1cccccccccc1cbb33bbbb333333bbbbb33333
+bcccccccbcccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb00000000000000000000000000000000ccccc1cccc1ccccccccccc1cbb33bbbb3333b33bbbb33333
+bcccccccbcccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb00000000000000000000000000000000ccccc1cccc1ccccccccc111cbb333bbb33bbbb3bbbb33333
+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb00000000000000000000000000000000ccccc1cccc1ccccccccc1cccbb3b3bbb333bb33bbbb33333
+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb00000000000000000000000000000000ccccc1cccc111cccccccccccbb3b3bb33b3b3bbbbbb33333
+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb00000000000000000000000000000000ccccc1ccccccccccccccccccbb3333b3bbb33bbbbbb33333
+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb00000000000000000000000000000000ccccc1ccccccccccccccccccb33333b333bb3bbbbbb33333
+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb00000000000000000000000000000000ccccc1ccccc1111ccccc1ccc33333333bb3b3bbbbb333333
 00000000000000000000000000000000000000000000000000000000000000000000000000000000cccccc1cc111cccccccc1ccc333333333bb33bbbbb333333
 00000000000000000000000000000000000000000000000000000000000000000000000000000000cccccc1cccccccccccc11ccc333333333333bbbbb3333333
 00000000000000000000000000000000000000000000000000000000000000000000000000000000cccccc11cccccccccc111ccc33333333bbb3bbbb33333333
