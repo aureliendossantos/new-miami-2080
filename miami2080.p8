@@ -116,6 +116,7 @@ function init_shop()
 	menu_index=1
  choice=1
 	trans_t=-30
+	colonel=false
 end
 
 function update_shop()
@@ -161,6 +162,7 @@ function update_shop()
    end
   else
    --messages et depart
+   colonel=true
    local mes=deploy_messages[dep_mes_i]
    local nb_mes=#mes
    local i=1
@@ -1225,6 +1227,7 @@ function init_map()
 	map_index=1
 	trans_t=-30
 	processed=1--tout sauf 0
+	colonel=true
 end
 
 function update_map()
@@ -1601,7 +1604,12 @@ end
 
 function dtb_draw()
  rectfill(dtb_y*2-139,dtb_y-44,128,128,2)
- spr(77,dtb_y*2-138,dtb_y-43,3,4)
+ local id,t=77,{6,11,3}
+ if colonel=true then
+  id=74
+  t={6,12,1}
+ end
+ spr(id,dtb_y*2-138,dtb_y-43,3,4)
  rectfill(0,dtb_y-11,127,128,2)
  rectfill(0,dtb_y-10,127,128,0)
 	if #dtb_queu>0 then
@@ -1619,9 +1627,8 @@ end
 
 --glitch effect
 
-function glitch(x,y,w,h)
+function glitch(x,y,w,h,t)
  if g_on == true then -- on boolean is mangaged by the timer
-  local t={6,11,3} -- three colors
   local c=flr(rnd(3))+1
   for i=0, 5, 4 do -- the outer loop generates the vertical glitch dots
    local height = rnd(h)
