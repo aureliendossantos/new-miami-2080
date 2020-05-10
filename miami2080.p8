@@ -7,7 +7,7 @@ __lua__
 function _init()
  first_time_map=true
  cur_threats={}
- stage=6
+ stage=8
  turn=0
  --particles
  dust,dust_front={},{}
@@ -738,18 +738,18 @@ function init_database()
    reactors={}
   },
   {
-   --giga boss
+   --tête boss 1
    boss=true,
 	  life=2000,
 	  money=10000,
-   anim={128},
-   spr_w=16,spr_h=4,
-   x1=0,y1=0,w=16*8,h=28,
+   anim={134},
+   spr_w=2,spr_h=3,
+   x1=2,y1=0,w=11,h=21,
    emitters={
-    {1,50,22},
-    {1,84,12},
-    {6,96,6},
-    {5,34,16}
+    {1,8,22},
+    {1,8,12},
+    {6,8,6},
+    {5,0,16}
    }
   },
   {
@@ -1069,7 +1069,7 @@ function init_database()
    {3,1,90,8,80},
   },
   {
-   {1,6,128,4}
+   {1,6,16,4}
   }
  }
 end
