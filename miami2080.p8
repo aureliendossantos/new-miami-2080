@@ -7,7 +7,7 @@ __lua__
 function _init()
  first_time_map=true
  cur_threats={}
- stage=0
+ stage=2
  turn=0
  --particles
  dust,dust_front={},{}
@@ -21,32 +21,37 @@ function _init()
  
  title_t=0
  dep_mes_i=1
- max_shield_fill=1600
+ max_shield_fill=30
+ multiplier=0
+ calc_multiplier=0
  offset=0
  t=0
- money=10000
- money_printed=10000
+ money=0
+ money_printed=0
  
  --temp angle
  a=0
  
  --state
- init_map()
- _upd=update_map
- _drw=draw_map
+ init_shmup()
+ _upd=update_shmup
+ _drw=draw_shmup
 end
 
 --scene gameover
 function update_gameover()
  if ❎_released and btn(❎) then
- 	_init()
+ 	init_map()
+  _upd=update_map
+  _drw=draw_map
  end
 end
 
 function draw_gameover()
- cls()
- print("game over",20,40,8)
- print("press ❎ to continue",20,50,9)
+ cls(3)
+ print("game over",20,50,11)
+ print("press ❎ to continue",20,60,6)
+ frame_borders()
 end
 
 --core functions
@@ -279,6 +284,7 @@ function init_shmup()
  enemies={}
  explosions={}
  create_stars()
+ blink_t=0
  wave=0
  notif_text=""
  notif_t=0
@@ -288,6 +294,7 @@ end
 
 function update_shmup()
  t+=1
+ blink_t+=0.5
  screen_shake()
  update_player()
 	update_enemies()
@@ -308,7 +315,10 @@ function wave_manager()
 	 update_title()
 	elseif wave==0 then
 	 update_stage_start()
-	elseif not text_mode and wave==#stages[stage]+1 and #enemies==0 then
+	elseif (not text_mode
+	and wave==#stages[stage]+1
+	and #enemies==0)
+	or p.life==-120 then
 		init_bubble()
 		wave+=1
 	elseif wave<=#stages[stage] then
@@ -329,7 +339,6 @@ function wave_manager()
 		  spawn_enemies(info[1],enemy[info[2]],info[3],info[4])
 		 end
 		 --next wave
-		 --wave=min(#stages[stage],wave+1)
 		 wave+=1
 		end
 	end
@@ -369,7 +378,6 @@ function draw_shmup()
   d:draw()
  end
 	draw_player()
-	spr(animate({64,65,66,67,68,69,70,71,72}),p.x+7,p.y+8)
 	for e in all(enemies) do
 		if e.canflip and e.x<60 then
 		 spr(animate(e.anim),e.x,e.y,e.spr_w,e.spr_h,true)
@@ -393,19 +401,25 @@ function draw_shmup()
 	--rectfill(p.x+p.x1,p.y+p.y1,p.x+p.x1+p.w,p.y+p.y1+p.h)
 	if stage==0 then
 	 draw_title()
-	elseif stage>1 then
+	elseif stage>1 and p.life>0 then
 	 local i=1
 	 for j=1,p.shield do
 	  rectfill(-11+i*14,5,3+i*14,7,12)
 	  i+=1
 	 end
-	 if shield_fill>10 then
-	  local col=12
-	  if flr(shield_fill)%9<5 then
-	   col=7
-	  end
+	 local col=12
+	 if flr(blink_t)%2==0 then
+	  col=7
+	 end
+	 if shield_fill>0 then
 	 	rectfill(-11+i*14,5,-11+i*14+(13*shield_fill/max_shield_fill),7,col)
   end
+  if not graze then
+	  --force not blinking
+	  col=12
+  end
+  print("x"..multiplier,3,10,col)
+  
   rectfill(4,5,29,5,5)
 	 rectfill(4,4,4+8.7*p.life,5,6)
 	 palt(11, true)
@@ -490,7 +504,7 @@ function init_database()
 		{5,"medium",2,1}
 	}
 	deploy_messages={
-	 {"oh, avant que j'oublie, petit conseil.","seul le gyrophare de votre vaisseau est vulnerable.","en fait,","ca pourrait meme vous aider de froler les balles avec le reste du vaisseau.","pensez-y quand vous etes en rade de bouclier.","y a pas de honte, ca peut arriver.","allez, bonne chasse."},
+	 {"oh, avant que j'oublie, petit conseil.","seul le gyrophare de votre vaisseau est vulnerable.","en fait,","ca pourrait meme vous aider de froler les balles avec le reste du vaisseau.","pensez-y quand vous etes en rade de bouclier ou d'argent.","y a pas de honte, ca peut arriver.","allez, bonne chasse."},
   {"et c'est parti."},
   {"vous savez, y a un truc special chez vous.","vous etes peut-etre un peu maladroite des fois","mais vous y mettez du coeur.","on voit pas ca chez tout le monde.","alors, quoi qu'il arrive, vous allez vous en sortir dans la vie.","si vous y croyez pas, j'y croirai pour vous.","bon vent, ma petite."},
   {"mettez-leur une raclee."},
@@ -952,6 +966,7 @@ function init_player()
 end
 
 function update_player()
+ graze=false
  --movement
  local ix,iy,speed=0,0,1
  if (btn⬅️) ix-=1
@@ -974,24 +989,25 @@ function update_player()
 	 p.y=mid(-8,p.y+iy*speed,115)
 	end
 	--transition de sortie
-	if (bubble_mode) p.y-=bubble_t*3
+	if (bubble_mode and p.life>0) p.y-=bubble_t*3
 	--weapons
 	p.wep1_t+=1
 	p.wep2_t+=1
-	if btn🅾️ then
-	 if p.wep2_t>=p.wep2_t_max and wave~=0 then
-	  shoot(secondary[eqp[3]],4,-2)
-	  p.wep2_t=0
-	 end
-	elseif btn❎ and p.wep1_t>=p.wep1_t_max and wave~=0 then
-	 shoot(weapon[eqp[2]],-2,2)
-	 shoot(weapon[eqp[2]],10,2)
-	 p.wep1_t=0
+	if wave~=0 and p.life>0 then
+		if btn🅾️ and p.wep2_t>=p.wep2_t_max then
+		 shoot(secondary[eqp[3]],4,-2)
+		 p.wep2_t=0
+		elseif btn❎ and p.wep1_t>=p.wep1_t_max then
+		 shoot(weapon[eqp[2]],-2,2)
+		 shoot(weapon[eqp[2]],10,2)
+		 p.wep1_t=0
+		end
 	end
 	--collision
 	for b in all(e_bullets) do
 		if collision(b,p) and
 		not p.invincible and
+		p.life>0 and
 		not text_mode then
 			if stage~=1 then
 				if p.shield>0 then
@@ -1001,25 +1017,40 @@ function update_player()
 				end
 			end
 			p.invincible=true
-			explode(b.x+4,b.y+4)
+			--explode(b.x+4,b.y+4)
+			for i=1,3 do
+			 add_new_dust(b.x+4,b.y,rnd(2)-1,-(rnd(1.5)-2),15,rnd(3)+2,0.1,dust_col,true)
+			end
 			del(e_bullets,b)
 			offset=0.15
 			sfx(1)
+		elseif not (b.x+b.x1>p.x+16 or
+          b.y+b.y1>p.y+16 or
+          b.x+b.x1+b.w<p.x or
+          b.y+b.y1+b.h<p.y) then
+		 graze=true
 		end
 	end
-	if p.life<=0 then
-	 _upd=update_gameover
-  _drw=draw_gameover
+	if p.life==0 then
+	 for i=1,30 do
+		 add_new_dust(p.x+rnd(16),p.y+rnd(16),rnd(2)-1,rnd(2)-2.1,rnd(10)+16*2.2,rnd(6)+2,0.05,dust_col)
+  end
+  p.life-=1
 	end
+	if (p.life<0) p.life-=1
 	if p.invincible and p.inv_t<60 then
 	 p.inv_t+=1
 	else
 	 p.inv_t=0
 	 p.invincible=false
 	end
-	if p.shield<ship[eqp[1]].shield then
-	 shield_fill+=1
+	if graze then
+	 calc_multiplier=min(3.5,calc_multiplier+0.01)
 	else
+	 calc_multiplier=max(1,calc_multiplier-0.002)
+	end
+	multiplier=min(3,flr(10*calc_multiplier)/10)
+	if p.shield>=ship[eqp[1]].shield then
 	 shield_fill=0
 	end
 	if shield_fill>=max_shield_fill then
@@ -1030,16 +1061,21 @@ function update_player()
 end
 
 function player_dust(x,y)
-	add_new_dust(p.x+x,p.y+y,rnd(0.3)-0.15,-(rnd(1)-1),7,3,0.1,dust_col)
+	if p.life>0 then
+	 add_new_dust(p.x+x,p.y+y,rnd(0.3)-0.15,-(rnd(1)-1),7,3,0.1,dust_col)
+ end
 end
 
 
 function draw_player()
- if p.inv_t%3==0 then
+ if p.inv_t%3==0 and p.life>0 then
   palt(11, true)
   palt(0, false)
  	spr(animate(p.anim),p.x,p.y,2,2)
   palt()
+ end
+ if p.life>0 then
+  spr(animate({64,65,66,67,68,69,70,71,72}),p.x+7,p.y+8)
  end
 end
 -->8
@@ -1174,11 +1210,14 @@ function update_enemies()
 		end
 		--mort
 		if e.life<=0 then
-		 money+=e.money
+		 money+=e.money*multiplier
 		 for i=1,(e.w+e.h)/2 do
 		  add_new_dust(e.x+e.x1+rnd(e.w),e.y+e.y1+rnd(e.h),rnd(2)-1,rnd(2)-2.1,rnd(10)+((e.w+e.h)/2)*2.2,rnd(6)+2,0.05,dust_col)
    end
-  del(enemies,e)
+   del(enemies,e)
+   if p.shield<ship[eqp[1]].shield then
+	   shield_fill+=1*multiplier
+	  end
 		end
 		--tir
 		if e.x>=0 and e.y>=0
@@ -1604,10 +1643,9 @@ end
 
 function dtb_draw()
  rectfill(dtb_y*2-139,dtb_y-44,128,128,2)
- local id,t=77,{6,11,3}
- if colonel=true then
+ local id=77
+ if colonel==true then
   id=74
-  t={6,12,1}
  end
  spr(id,dtb_y*2-138,dtb_y-43,3,4)
  rectfill(0,dtb_y-11,127,128,2)
@@ -1627,8 +1665,9 @@ end
 
 --glitch effect
 
-function glitch(x,y,w,h,t)
+function glitch(x,y,w,h)
  if g_on == true then -- on boolean is mangaged by the timer
+  local t={6,11,3}
   local c=flr(rnd(3))+1
   for i=0, 5, 4 do -- the outer loop generates the vertical glitch dots
    local height = rnd(h)
@@ -1763,9 +1802,14 @@ function update_bubble()
   if bubble_t>=5.1 then
    bubble_mode=false
   elseif bubble_t>2.55 then
-   init_map()
-	  _upd=update_map
-	  _drw=draw_map
+   if p.life<0 then
+	   _upd=update_gameover
+	   _drw=draw_gameover
+   else
+	   init_map()
+		  _upd=update_map
+		  _drw=draw_map
+	  end
   end
  end
 end
@@ -1815,38 +1859,38 @@ bbbbbbbbbbbbbbbb00000000000000000000000000eeeee0000ee000000ee00000000ee00ee00000
 055555506666667555555555666675d0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 007636006666675ddddddddd666675d0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00066000666675d000000000666675d0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-cc0000007c000000770000008700000088000000880000007800000077000000c700000000000000ccccccccccccccccccccccccbbbbb3333333333333333333
-cc000000cc0000007c00000077000000870000008800000088000000780000007700000000000000cccccccccccccc1111ccccccbbbb33333333333333333333
-00000000000000000000000000000000000000000000000000000000000000000000000000000000cccccccc1111111cccccccccbbb333333333333333333333
-00000000000000000000000000000000000000000000000000000000000000000000000000000000ccccc1111cccccccccccccccbbb3333333bb333333333333
-00000000000000000000000000000000000000000000000000000000000000000000000000000000ccccc1ccccccccccccccccccbbb33333bbbbb33333333333
-00000000000000000000000000000000000000000000000000000000000000000000000000000000ccccc1ccccccccccccccccccbb333bbbbbbbbb3333333333
-00000000000000000000000000000000000000000000000000000000000000000000000000000000ccccc1ccccccccccccccccccbb33bbbbbbbbbbb333333333
-00000000000000000000000000000000000000000000000000000000000000000000000000000000ccccc1ccccccccccccccccccbb3bbbbbbbbbbbbb33333333
-b000000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb00000000000000000000000000000000ccccc11cccccccccccccccccbb3bbb33333bbbb333333333
-06677660bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb00000000000000000000000000000000cccccc111cccccccc11cccccbb3bb33bbb3bb33bb3333333
-06677760bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb00000000000000000000000000000000ccccc111111111111111ccccbb3bb3bbbb3b33bbbb333333
-07667770bbbbbbbbbbbb11111111111111111111111111bb00000000000000000000000000000000ccccc111111111111111c11cbb3bb3bbbb3b3bbbbb333333
-07777670bbbbbbbbbbb1bbbbbbbb1bbbbbbbb1bbbbbbbb1b00000000000000000000000000000000ccccc111111111111111c11cbb33bb3bbb3b33bbbb333333
-b077660bbbbbbbbbbb1bbbbbbbb1bbbbbbbb1bbbbbbbb1b100000000000000000000000000000000ccccc111111111111111cc1cbb33bb33333bb33b33333333
-bb0660bbbbbbbbbbbb111111111111111111111111111b1100000000000000000000000000000000ccccc111111111111111cc1cbb33bbb333bbb33333b33333
-bbb00bbbbbbbbbbbb1bbbbbbbbbbbbbb1bbbbbbbbbbbb11b00000000000000000000000000000000ccccc11111111111111ccc1cbb33bbbbbbbbbbb33bb33333
-bbbbbbbbbbbbbbbbbb1111111111111111111111111111bb00000000000000000000000000000000ccccc1ccccc1cccccccccc1cbb33bbbb333333bbbbb33333
-bcccccccbcccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb00000000000000000000000000000000ccccc1cccc1ccccccccccc1cbb33bbbb3333b33bbbb33333
-bcccccccbcccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb00000000000000000000000000000000ccccc1cccc1ccccccccc111cbb333bbb33bbbb3bbbb33333
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb00000000000000000000000000000000ccccc1cccc1ccccccccc1cccbb3b3bbb333bb33bbbb33333
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb00000000000000000000000000000000ccccc1cccc111cccccccccccbb3b3bb33b3b3bbbbbb33333
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb00000000000000000000000000000000ccccc1ccccccccccccccccccbb3333b3bbb33bbbbbb33333
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb00000000000000000000000000000000ccccc1ccccccccccccccccccb33333b333bb3bbbbbb33333
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb00000000000000000000000000000000ccccc1ccccc1111ccccc1ccc33333333bb3b3bbbbb333333
-00000000000000000000000000000000000000000000000000000000000000000000000000000000cccccc1cc111cccccccc1ccc333333333bb33bbbbb333333
-00000000000000000000000000000000000000000000000000000000000000000000000000000000cccccc1cccccccccccc11ccc333333333333bbbbb3333333
-00000000000000000000000000000000000000000000000000000000000000000000000000000000cccccc11cccccccccc111ccc33333333bbb3bbbb33333333
-00000000000000000000000000000000000000000000000000000000000000000000000000000000ccccccc11cccccccc11c1ccc333333333b33bbbb33333333
-00000000000000000000000000000000000000000000000000000000000000000000000000000000cccccccc11111111cccc1ccc3333333bbb3bbb3333333333
-00000000000000000000000000000000000000000000000000000000000000000000000000000000ccccccccccc1cccccccc1ccc333333333b33b33333333333
-00000000000000000000000000000000000000000000000000000000000000000000000000000000cccccccccc11ccccccccc1cc33333333bbb3b33333333333
-00000000000000000000000000000000000000000000000000000000000000000000000000000000cccccccccc1ccccccccccccc3333333333b3333333333333
+cc0000007c000000770000008700000088000000880000007800000077000000c700000000000000bbbb33bbbbbb333333333333bbbbb3333333333333333333
+cc000000cc0000007c00000077000000870000008800000088000000780000007700000000000000bbb33bbbbbbbbb3333333333bbbb33333333333333333333
+00000000000000000000000000000000000000000000000000000000000000000000000000000000bb33bbbbbbbbbbb333333333bbb333333333333333333333
+00000000000000000000000000000000000000000000000000000000000000000000000000000000bb3333bbbbbbbbb333333333bbb3333333bb333333333333
+00000000000000000000000000000000000000000000000000000000000000000000000000000000b33bbbbbbbbbbb3333b33333bbb33333bbbbb33333333333
+0000000000000000000000000000000000000000000000000000000000000000000000000000000033bbbbbbbbbb33bbbbb33333bb333bbbbbbbbb3333333333
+000000000000000000000000000000000000000000000000000000000000000000000000000000003bbbbbbbb33333bbbbb33333bb33bbbbbbbbbbb333333333
+000000000000000000000000000000000000000000000000000000000000000000000000000000003bbbbb33333333bbbbb33333bb3bbbbbbbbbbbbb33333333
+b000000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb000000000000000000000000000000003333333b33333bbbbbb33333bb3bbb33333bbbb333333333
+06677660bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb00000000000000000000000000000000bbb333333333bbbbbbbb3333bb3bb33bbb3bb33bb3333333
+06677760bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb00000000000000000000000000000000bbb3333bbbbbbbbbbbbb3333bb3bb3bbbb3b33bbbb333333
+07667770bbbbbbbbbbbb11111111111111111111111111bb00000000000000000000000000000000bbb333bbbbbbbbbbbbbb3333bb3bb3bbbb3b3bbbbb333333
+07777670bbbbbbbbbbb1bbbbbbbb1bbbbbbbb1bbbbbbbb1b00000000000000000000000000000000bbbb33bbbbbbbbbbbbbb3333bb33bb3bbb3b33bbbb333333
+b077660bbbbbbbbbbb1bbbbbbbb1bbbbbbbb1bbbbbbbb1b100000000000000000000000000000000bbbb33bbbbbbbbbbbbbb3333bb33bb33333bb33b33333333
+bb0660bbbbbbbbbbbb111111111111111111111111111b1100000000000000000000000000000000bbbb3bbbbbb33333bbbb3333bb33bbb333bbb33333b33333
+bbb00bbbbbbbbbbbb1bbbbbbbbbbbbbb1bbbbbbbbbbbb11b00000000000000000000000000000000bbbbb3bb333333333bbb3333bb33bbbbbbbbbbb33bb33333
+bbbbbbbbbbbbbbbbbb1111111111111111111111111111bb00000000000000000000000000000000bbbbbb33333333333bbb3333bb33bbbb333333bbbbb33333
+bcccccccbcccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb00000000000000000000000000000000bbbbbbbbb3333333bbbb3333bb33bbbb3333b33bbbb33333
+bcccccccbcccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb00000000000000000000000000000000bbbbbbbbbb33333bbbb33333bb333bbb33bbbb3bbbb33333
+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb00000000000000000000000000000000bbbbbbbbb3bbbbbbbb33bb33bb3b3bbb333bb33bbbb33333
+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb00000000000000000000000000000000bbbbbbbb3bbbbbbb33bbb333bb3b3bb33b3b3bbbbbb33333
+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb00000000000000000000000000000000bbbbbbb3bbbbb333bbbbbb33bb3333b3bbb33bbbbbb33333
+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb00000000000000000000000000000000bbbbbbb3bb333bbbbbbb3333b33333b333bb3bbbbbb33333
+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb00000000000000000000000000000000bbbbbbbb33bb3bbbbbbb333333333333bb3b3bbbbb333333
+00000000000000000000000000000000000000000000000000000000000000000000000000000000bbbbbbbbbbbb33bbb3333333333333333bb33bbbbb333333
+00000000000000000000000000000000000000000000000000000000000000000000000000000000bbbbbbbbbbbb33bbbbb33333333333333333bbbbb3333333
+000000000000000000000000000000000000000000000000000000000000000000000000000000003bb333333bb333bbbbb3333333333333bbb3bbbb33333333
+0000000000000000000000000000000000000000000000000000000000000000000000000000000033333bb3333333bbbbbb3333333333333b33bbbb33333333
+000000000000000000000000000000000000000000000000000000000000000000000000000000003bb333333bb33bbb333333333333333bbb3bbb3333333333
+0000000000000000000000000000000000000000000000000000000000000000000000000000000033333bb33333bbbbbbbbb333333333333b33b33333333333
+0000000000000000000000000000000000000000000000000000000000000000000000000000000033333333333bbbbbbb33333333333333bbb3b33333333333
+0000000000000000000000000000000000000000000000000000000000000000000000000000000033333333333bbbbb333333333333333333b3333333333333
 05566666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666665555555566666666666666666666666
 00566666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666556666666556666666666666666666665
 00056666666666666666666666666666666666666666666666666666666666666666666666666666666666666666665566666666656666666666666666666665
