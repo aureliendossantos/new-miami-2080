@@ -7,7 +7,7 @@ __lua__
 function _init()
  first_time_map=true
  cur_threats={}
- stage=4
+ stage=6
  turn=0
  --particles
  dust,dust_front={},{}
@@ -560,7 +560,7 @@ function init_database()
  }
  --equipment chosen
  --ship, weapon, secondary
- eqp={1,1,1}
+ eqp={1,2,1}
 	--ships
 	ship={
 	 {
@@ -610,8 +610,8 @@ function init_database()
    price=800,
    speed=3,
    frequency=8,
-   duration=25,
-   damage=12,
+   duration=45,
+   damage=10,
    sfx=0,
    anim={30},
    x1=0,y1=1,
@@ -697,7 +697,7 @@ function init_database()
   },
   {
    --wheel guy
-	  life=180,
+	  life=140,
 	  money=120,
    anim={2},
    spr_w=1,spr_h=1,
@@ -724,7 +724,7 @@ function init_database()
   },
   {
    --horizontal laser guy
-	  life=180,
+	  life=200,
 	  following=true,
 	  lifespan=280,
 	  canflip=true,
@@ -876,8 +876,8 @@ function init_database()
      --reprend pos. joueur
      e.base_a=angle_to(e.x+emt[2],e.y+emt[3],p.x+p.x1-2,p.y+p.y1-2)
     end
-    emt.pattern_t+=0.1
-    if flr(emt.pattern_t)%4~=0 then
+    emt.pattern_t+=0.05
+    if flr(emt.pattern_t)%3~=0 then
 	    return e.base_a+0.04+sin(emt.pattern_t)/50
 	   end
    end
@@ -889,8 +889,8 @@ function init_database()
    speed=1.5,
    repeats=1,
    angle=function (rpt,emt,e)
-    emt.pattern_t+=0.1
-    if flr(emt.pattern_t)%4~=0 then
+    emt.pattern_t+=0.05
+    if flr(emt.pattern_t)%3~=0 then
 	    return e.base_a-(0.04-sin(emt.pattern_t)/50)
 	   end
    end
@@ -1003,8 +1003,49 @@ function init_database()
    {2,1,20,6,100}
   },
   {
-	  --tests
-	  {"ce niveau est juste un test. il compte pas vraiment!"},
+	--4-level-3
+	{2,1,30,3},
+	{2,7,90,1},
+	{1,1,8,1,140},
+	{2,1,25,1,300},
+	{4,1,90,2},
+	{2,1,60,7,60},
+	{1,7,-50,8,80},
+	{1,4,20,4},
+	{2,1,60,7,160},
+	{3,1,80,9,90},
+	{1,2,-30,1},
+	{1,2,30,1},
+	{2,7,90,1,40},
+	{1,2,-20,1,300},
+	{2,2,40,1},
+	{3,1,60,7},
+	{1,2,16,1,20},
+	{2,1,40,8,5}
+
+  },
+  {
+	  --5-level-4
+	  {2,1,40,2},
+	  {3,1,60,7,120},
+	  {3,1,90,8,80},
+	  {1,3,-20,1},
+	  {1,3,50,1},
+	  {2,3,75,1},
+	  {1,4,16,4,3},
+	  {1,3,50,1},
+	  {1,4,30,4,3},
+	  {1,3,-50,1,130},
+	  {1,4,-15,4,3},
+	  {3,1,90,2},
+		{2,1,60,7,80},
+		{1,7,50,8,5},
+	  {1,3,-40,1},
+	  {2,3,75,1},
+	  {1,4,16,4,3}
+   },
+   {
+	--6-level-5
 	{1,4,-40,4},
 	{1,1,80,2,1},
 	{1,1,-80,3,1},
