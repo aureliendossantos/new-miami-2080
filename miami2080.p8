@@ -1,5 +1,5 @@
 pico-8 cartridge // http://www.pico-8.com
-version 26
+version 27
 __lua__
 --new miami 2080
 --surveillance brigade operations
@@ -7,7 +7,7 @@ __lua__
 function _init()
  first_time_map=true
  cur_threats={}
- stage=0
+ stage=4
  turn=0
  --particles
  dust,dust_front={},{}
@@ -22,8 +22,6 @@ function _init()
  title_t=0
  dep_mes_i=1
  max_shield_fill=30
- multiplier=0
- calc_multiplier=0
  offset=0
  t=0
  money=0
@@ -41,6 +39,7 @@ end
 --scene gameover
 function update_gameover()
  if ❎_released and btn(❎) then
+ 	got_game_over=true
  	init_map()
   _upd=update_map
   _drw=draw_map
@@ -288,6 +287,8 @@ function init_shmup()
    music(7)
   end
  end
+ multiplier=0
+ calc_multiplier=0
  bullets={}
  e_bullets={}
  enemies={}
@@ -320,7 +321,9 @@ function update_shmup()
 end
 
 function wave_manager()
-	if stage==0 then
+	if p.life==-120 then
+	 init_bubble()
+	elseif stage==0 then
 	 update_title()
 	elseif wave==0 then
 	 update_stage_start()
@@ -331,8 +334,7 @@ function wave_manager()
 		end
 	elseif (not text_mode
 	and wave==#stages[stage]+1
-	and #enemies==0)
-	or p.life==-120 then
+	and #enemies==0) then
 		wave+=1
 		notif_t=0
 	 notif_text="mission complete"
@@ -610,7 +612,7 @@ function init_database()
    frequency=8,
    duration=25,
    damage=12,
-   sfx=13,
+   sfx=0,
    anim={30},
    x1=0,y1=1,
    w=6,h=6,
@@ -622,7 +624,7 @@ function init_database()
    frequency=8,
    duration=25,
    damage=15,
-   sfx=13,
+   sfx=0,
    anim={29},
    x1=1,y1=0,
    w=5,h=7,
@@ -1405,6 +1407,7 @@ function update_map()
   if not got_game_over then
    next_turn()
   end
+  got_game_over=false
  end
  
  if processed==0 and not first_time_map then
