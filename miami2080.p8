@@ -7,7 +7,7 @@ __lua__
 function _init()
  first_time_map=true
  cur_threats={}
- stage=8
+ stage=0
  turn=0
  --particles
  dust,dust_front={},{}
@@ -125,17 +125,21 @@ end
 
 function update_shop()
  if btnp⬆️ then
+  sfx(28)
   menu_index=max(1,menu_index-1)
  end
  if btnp⬇️ then
+  sfx(28)
   menu_index=min(4,menu_index+1)
  end
  for i=1,3 do
   if menu_index==i then
    if btnp⬅️ then
+    sfx(28)
     choice = max(1,choice-1)
    end
    if btnp➡️ then
+    sfx(28)
     choice = min(3,choice+1)
    end
   end
@@ -156,13 +160,13 @@ function update_shop()
      money-=item.price
      item.bought=true
      eqp[menu_index]=choice
-     --sfx(2)
+     sfx(29)
     else
-     sfx(0)
+     sfx(33)
     end
    else
     eqp[menu_index]=choice
-    sfx(1)
+    sfx(35)
    end
   else
    --messages et depart
@@ -281,12 +285,15 @@ end
 --scene shmup
 function init_shmup()
  if stage>0 then
-  if stage==1 or stage==3 then
+  if stage==8 then
+   music(23)
+  elseif stage==1 or stage==3 then
    music(0)
   else
    music(7)
   end
  end
+ boss_life=0
  multiplier=0
  calc_multiplier=0
  bullets={}
@@ -321,6 +328,10 @@ function update_shmup()
 end
 
 function wave_manager()
+	local nb_enemies=#enemies
+	for e in all(enemies) do
+		if (e.boss or e.cant_hit) nb_enemies-=1
+	end
 	if p.life==-120 then
 	 init_bubble()
 	elseif stage==0 then
@@ -334,7 +345,7 @@ function wave_manager()
 		end
 	elseif (not text_mode
 	and wave==#stages[stage]+1
-	and #enemies==0) then
+	and nb_enemies==0) then
 		wave+=1
 		notif_t=0
 	 notif_text="mission complete"
@@ -345,7 +356,7 @@ function wave_manager()
 			info[5]-=1
 		end
 		--when timer=0 or no enemy
-		if not text_mode and (info[5]==0 or #enemies==0) then
+		if not text_mode and (info[5]==0 or nb_enemies==0) then
 		 if type(info[1])=="function" then
 			 info[1]()
 		 elseif type(info[1])=="string" then
@@ -481,24 +492,7 @@ function draw_shmup()
 	 --money
 	 draw_money()
 	end
-	draw_bosslife()
 	draw_notif(notif_text,notif_t)
-end
-
-function draw_bosslife()
- for e in all(enemies) do
- 	if e.boss then
- 	 local col=1
- 	 local w=6+e.life/enemy[5].life*119
- 		line(5,1,125,1,col)
- 		for i=1,3 do
- 			local y=1+i
- 			line(5-i,y,126-i,y,col)
- 			line(6-i,y,w-i,y,8)
-			end
-			line(2,5,122,5,col)
-		end
- end
 end
 
 --bullets + explosions
@@ -546,7 +540,8 @@ function init_database()
 		{2,"low",2,1},
 		{3,"low",1,1},
 		{4,"medium",3,1},
-		{5,"medium",2,1}
+		{5,"medium",2,1},
+		{8,"high",2,1}
 	}
 	deploy_messages={
 	 {"oh, avant que j'oublie, petit conseil.","seul le gyrophare de votre vaisseau est vulnerable.","en fait,","ca pourrait meme vous aider de froler les balles avec le reste du vaisseau.","vous verrez.","allez, bonne chasse."},
@@ -554,13 +549,13 @@ function init_database()
   {"vous savez, y a un truc special chez vous.","vous etes peut-etre un peu maladroite des fois","mais vous y mettez du coeur.","on voit pas ca chez tout le monde.","alors, quoi qu'il arrive, vous allez vous en sortir dans la vie.","si vous y croyez pas, j'y croirai pour vous.","bon vent, ma petite."},
   {"mettez-leur une raclee."},
   {"vous commencez a etre a l'aise ?","pas trop hein","c'est le metier qui rentre.","bientot on croira que vous avez fait ca toute votre vie.","oubliez pas d'attacher votre ceinture."},
-  {"jeune fille.","vous alliez partir sans me prevenir ?","vous savez, je vous regarde toujours dans le radar.","faudrait pas qu'il vous arrive quelque chose.","alors passez me voir, la prochaine fois."},
+  {"tiens, bonjour jeune fille.","ah mais vous alliez partir ?","et sans me dire bonjour en plus.","vous savez, je vous regarde toujours dans le radar.","faudrait pas qu'il vous arrive quelque chose.","alors passez me voir, la prochaine fois."},
   {"tiens donc, ma recrue preferee.","heu, le dites pas aux autres.","vous savez, je voulais pas etre affecte ici","ma famille est a fortune iii","alors les journees sont longues","mais vous","...","ah, je sais pas.","faites comme si j'avais rien dit, va.","bonne route, soldat.","vous allez les degommer."},
   {"c'est parti."}
  }
  --equipment chosen
  --ship, weapon, secondary
- eqp={1,2,1}
+ eqp={1,1,1}
 	--ships
 	ship={
 	 {
@@ -619,7 +614,7 @@ function init_database()
    text={"voila une arme qui a un peu plus de gueule deja.","avec ca, tu vas un peu moins tirer a cote des mechants.","c'est pratique."}
   },
   {
-   price=5990,
+   price=6990,
    speed=3,
    frequency=8,
    duration=25,
@@ -636,9 +631,9 @@ function init_database()
   {
    speed=3.5,
    frequency=12,
-   duration=16,
+   duration=22,
    damage=10,
-   sfx=13,
+   sfx=36,
    anim={47},
    x1=2,y1=2,
    w=3,h=3,
@@ -650,7 +645,7 @@ function init_database()
    frequency=20,
    duration=35,
    damage=60,
-   sfx=13,
+   sfx=36,
    anim={46},
    x1=2,y1=0,
    w=3,h=7,
@@ -662,7 +657,7 @@ function init_database()
    frequency=6,
    duration=13,
    damage=30,
-   sfx=13,
+   sfx=36,
    anim={45},
    x1=0,y1=0,
    w=6,h=7,
@@ -738,19 +733,20 @@ function init_database()
    reactors={}
   },
   {
-   --tête boss 1
+   --corps boss 1
    boss=true,
+   cant_hit=true,
 	  life=2000,
 	  money=10000,
-   anim={134},
-   spr_w=2,spr_h=3,
-   x1=2,y1=0,w=11,h=21,
-   emitters={
-    {1,8,22},
-    {1,8,12},
-    {6,8,6},
-    {5,0,16}
-   }
+   anim={128},
+   spr_w=6,spr_h=3,
+   x1=0,y1=0,w=8*6,h=8*3
+   --emitters={
+    --{1,8,22},
+    --{1,8,12},
+    --{6,8,6},
+    --{5,0,16}
+   --}
   },
   {
    --following tunnel guy
@@ -764,6 +760,30 @@ function init_database()
     {10,8,2}
    }
   },
+  {
+	--8-tete boss 1
+	cant_hit=true,
+	   life=2000,
+	   money=0,
+	anim={118},
+	spr_w=2,spr_h=4,
+	x1=0,y1=16,w=16,h=16,
+	emitters={}
+   },
+   {
+	--9-bras boss 1
+	   life=1100,
+	   money=0,
+	anim={137},
+	spr_w=2,spr_h=3,
+	x1=4,y1=0,w=10,h=22,
+	emitters={
+	 --{1,8,22},
+	 --{1,5,12},
+	 {6,5,12},
+	 {12,5,12}
+	}
+   }
  }
  --bullet emitters
  emitter={
@@ -814,7 +834,7 @@ function init_database()
    end
   },
   {
-   --wheel large gap
+   --5-wheel large gap
    bullet=1,
    frequency=8,
    speed=1.3,
@@ -825,13 +845,13 @@ function init_database()
    end
   },
   {
-   --wheel tight
+   --6-wheel tight
    bullet=1,
-   frequency=4,
-   speed=1.3,
+   frequency=8,
+   speed=0.9,
    repeats=4,
    angle=function (rpt,emt)
-    emt.pattern_t+=0.0075
+    emt.pattern_t+=0.003
 	   return emt.pattern_t+0.25*rpt
    end
   },
@@ -904,7 +924,40 @@ function init_database()
 	angle=function (rpt,emt,e)
 	 return angle_to(e.x+emt[2],e.y+emt[3],p.x+p.x1-2,p.y+p.y1-2)
 	end
-   }
+   },
+   {
+	--12-wheel bursts
+	bullet=2,
+	frequency=90,
+	speed=2,
+	repeats=10,
+	angle=function (rpt,emt)
+	 emt.pattern_t+=0.0025
+		return emt.pattern_t+0.1*rpt
+	end
+   },
+   {
+	--13-wheel large gap reversed
+	bullet=1,
+	frequency=8,
+	speed=1.3,
+	repeats=4,
+	angle=function (rpt,emt)
+	 emt.pattern_t+=0.01
+		return -(emt.pattern_t+0.25*rpt)
+	end
+   },
+   {
+	--14-wheel tight reversed
+	bullet=1,
+	frequency=8,
+	speed=0.9,
+	repeats=4,
+	angle=function (rpt,emt)
+	 emt.pattern_t+=0.003
+		return -(emt.pattern_t+0.25*rpt)
+	end
+   },
  }
  bullet={
   {
@@ -992,9 +1045,9 @@ function init_database()
    {1,1,20,1,70},
    {3,1,70,1},
    {1,1,-50,7,120},
-   {1,1,50,6,80},
-   {1,1,-25,7,60},
-   {1,1,25,6,60},
+   {1,1,50,6,8},
+   {1,1,-25,7,6},
+   {1,1,25,6,6},
    {1,2,0,1,80},
    {1,2,-40,1},
    {1,2,-50,7},
@@ -1069,7 +1122,30 @@ function init_database()
    {3,1,90,8,80},
   },
   {
-   {1,6,16,4}
+	  --8-boss-1
+   {1,6,50,4},
+   {1,8,16,4},
+   {1,9,82,4},
+   {1,9,-44,4,1},
+   {function()
+	enemies[2].cant_hit=false
+	enemies[2].emitters={
+		{1,0,12},
+		{1,16,12},
+		{1,8,18},
+		{6,8,6},
+		{5,0,16},
+		{13,8,6},
+		{14,0,16}
+	   }
+	for emt in all(enemies[2].emitters) do
+	emt.shoot_t=0
+	emt.pattern_t=0
+	end
+	end},
+	{function()
+	enemies[1].life-=2000
+	end}
   }
  }
 end
@@ -1176,6 +1252,7 @@ function update_player()
 	 for i=1,30 do
 		 add_new_dust(p.x+rnd(16),p.y+rnd(16),rnd(2)-1,rnd(2)-2.1,rnd(10)+16*2.2,rnd(6)+2,0.05,dust_col)
   end
+  sfx(31)
   p.life-=1
 	end
 	if (p.life<0) p.life-=1
@@ -1340,13 +1417,13 @@ function update_enemies()
 		end
 	 --collision
  	for b in all(bullets) do
- 		if collision(e,b) then
+ 		if collision(e,b) and not e.cant_hit then
  		 e.life-=b.damage
  		 for i=1,3 do
      add_new_dust(b.x+4,b.y,rnd(2)-1,rnd(1.5)-2,15,rnd(3)+1,0.1,dust_col,true)
  			end
  			del(bullets,b)
- 			sfx(1)
+ 			if (e.life>0) sfx(1)
 			end
 		end
 		--mort
@@ -1355,6 +1432,7 @@ function update_enemies()
 		 for i=1,(e.w+e.h)/2 do
 		  add_new_dust(e.x+e.x1+rnd(e.w),e.y+e.y1+rnd(e.h),rnd(2)-1,rnd(2)-2.1,rnd(10)+((e.w+e.h)/2)*2.2,rnd(6)+2,0.05,dust_col)
    end
+   sfx(31)
    del(enemies,e)
    if p.shield<ship[eqp[1]].shield then
 	   shield_fill+=1*multiplier
@@ -1414,14 +1492,17 @@ end
 function update_map()
  if trans_t>160 then
 		if btnp⬆️ then
+			sfx(28)
 		 map_index=max(1,map_index-1)
 		 blink_t=0
 		end
 		if btnp⬇️ then
+			sfx(28)
 			map_index=min(#cur_threats,map_index+1)
 		 blink_t=0
 		end
 		if btnp❎ then
+			sfx(35)
 		 stage=threats[cur_threats[map_index]][1]
 		 _upd=update_shop
 	  _drw=draw_shop
@@ -1452,7 +1533,7 @@ function update_map()
  end
  
  if processed==0 and not first_time_map then
- 	create_threats()
+	create_threats()
  	processed=false
  end
  
@@ -1476,13 +1557,14 @@ function threat_progress(i)
  if threats[i][4]==3 then
  	dtb_disp("la tour "..threats[i][3].."est attaquee !",function() processed-=1 end)
  else
-  dtb_disp("hmm, les aliens progressent vers la tour"..threats[i][3].."...",function() processed-=1 end)
+  dtb_disp("hmm, les aliens progressent vers la tour "..threats[i][3].."...",function() processed-=1 end)
  end
 end
 
 function create_threats()
  turn+=1
 	if turn==1 then
+		sfx(34) 
 		add(cur_threats,2)
 		add(cur_threats,3)
 		local text={"ah, y a d'autres missions pour vous.","vous savez, j'ai foi en vous.","je vais vous regarder faire d'ici."}
@@ -1490,11 +1572,23 @@ function create_threats()
 			dtb_disp(t)
 		end
 	elseif turn==3 then
+		sfx(34) 
 	 add(cur_threats,4)
-	 local text={"la tour 3 a detecte quelque chose !","faites attention, ca a l'air d'etre du serieux.","revenez-nous en bon etat !"}
+	 local text={"la tour 3 a detecte quelque chose !","faites attention, ca a l'air d'etre plus serieux.","revenez-nous en bon etat !"}
 		for t in all(text) do
 			dtb_disp(t)
 		end
+	elseif turn==3.5 then --niveaux inachevれたs!
+	 local text={"de nouvelles menaces !","on dirait que vous avez reveille le nid.","mefiez-vous."}
+	elseif turn==4 then
+		sfx(34) 
+	 add(cur_threats,5)
+	 local text={"la reine arrive.","c'est la derniere ligne droite, soldat."}
+		for t in all(text) do
+			dtb_disp(t)
+		end
+	elseif turn==5 then
+	 local text={"incroyable","vous avez fait un sacre boulot, ici.","new miami est en securite desormais.","ce jeu a ete realise en une semaine par aurelien","et les sprites ont ete dessines par nev.","normalement, il devait y avoir plus d'ennemis et plus de niveaux","mais j'ai manque de temps !","si tu as aime, mets des etoiles sur itch.io !","merci beaucoup et a bientot pour de nouveaux jeux.","bisous"}
 	end
 end
 
@@ -1765,7 +1859,7 @@ function dtb_update()
 					local curchar=sub(curlines[dtb_curline],curchari,curchari)
 					dtb_ltime=1
 					if curchar~=" " then
-						sfx(0)
+						sfx(27)
 					end
 					if curchar=="." then
 						dtb_ltime=6
@@ -2253,6 +2347,17 @@ __sfx__
 010e00000c0231951517516195150c0231751519516175150c0231951517516195150c0231751519516175150c023135151f0111f5110c0231751519516175150c0231e7111e7102a7100c023175151951617515
 010e0000051300c02011010051300c0200f010051300c02011010051300c0200f0200f0200f0120f0120f012061300d02012010071300e02013010081300f0201503012020140101201015030120201401012010
 010e00000c0231e5151c5161e5150c0231c5151e5161c5150c0231e5151c5161e5150c0231c5151e5161c5150c0230c51518011185110c0231c5151e5161c5150c0231e7111e7102a7100c023175151951617515
+000400002152526535005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500
+000300002f73534735000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000300003053534535044000440010400044000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000400002474526745297452e7453074532745357453a7452400526005290052e0053000532005350053a00500000000000000000000000000000000000000000000000000000000000000000000000000000000
+000400002763022630206201b6201661015610116100d6100b6100761005610036100261002610026100261001610016100161501600016000160001600000000000000000000000000000000000000000000000
+000300000c363236650935520641063311b6210432116611023210f611013110a6110361104600036000260001600016000460003600026000160001600016000160004600036000260001600016000160001600
+000300000c343236450933520621063311b6210432116611023210f611013110a6110361104600036000260001600016000460003600026000160001600016000160004600036000260001600016000160001600
+00090000013150132501345000002660021600196001260011607116070c60710607156071a6071e607206072260722607206001d6001c60018600156001560014600166001a6001c6001c600166000f60000000
+000200001d3551d7451d3351375513345137350070000700007000070000700007000070000700007000070000700007000070000700007000070000700007000070000700007000070000700007000070000700
+0007000023745287452d3021e105370021c0051330213302133021330213302133021330213302133021330213302133021330213302133021330213302133021320207002070022b0001f0001f0021f0021f002
+000100000c1500e0511105114051170511705014051120510f0510c15100100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100
 __music__
 01 02034344
 00 02034344
