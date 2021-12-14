@@ -1595,6 +1595,9 @@ function create_threats()
 		end
 	elseif turn==5 then
 	 local text={"incroyable","vous avez fait un sacre boulot, ici.","new miami est en securite desormais.","ce jeu a ete realise en une semaine par aurelien","et les sprites ont ete dessines par nev.","normalement, il devait y avoir plus d'ennemis et plus de niveaux","mais j'ai manque de temps !","si tu as aime, mets des etoiles sur itch.io !","merci beaucoup et a bientot pour de nouveaux jeux.","bisous"}
+		for t in all(text) do
+			dtb_disp(t)
+		end
 	end
 end
 
