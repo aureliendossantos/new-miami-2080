@@ -170,9 +170,9 @@ function update_shop()
    end
   else
    --messages et depart
-   colonel=true
    local mes=deploy_messages[dep_mes_i]
    if mes then
+    colonel=true
 	   local nb_mes=#mes
 	   local i=1
 	   if nb_mes>1 then
@@ -187,6 +187,10 @@ function update_shop()
 		   _upd=update_shmup
 		   _drw=draw_shmup
 	   end)
+	  else
+	   init_shmup()
+		  _upd=update_shmup
+		  _drw=draw_shmup
 	  end
 	 end
 	end
