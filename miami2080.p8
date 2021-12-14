@@ -1,5 +1,5 @@
 pico-8 cartridge // http://www.pico-8.com
-version 27
+version 33
 __lua__
 --new miami 2080
 --surveillance brigade operations
@@ -172,20 +172,22 @@ function update_shop()
    --messages et depart
    colonel=true
    local mes=deploy_messages[dep_mes_i]
-   local nb_mes=#mes
-   local i=1
-   if nb_mes>1 then
-    for j=1,nb_mes-1 do
-     dtb_disp(mes[i])
-     i+=1
-    end
-   end
-   dtb_disp(mes[i],function()
-	   dep_mes_i+=1
-				init_shmup()
-	   _upd=update_shmup
-	   _drw=draw_shmup
-   end)
+   if mes then
+	   local nb_mes=#mes
+	   local i=1
+	   if nb_mes>1 then
+	    for j=1,nb_mes-1 do
+	     dtb_disp(mes[i])
+	     i+=1
+	    end
+	   end
+	   dtb_disp(mes[i],function()
+		   dep_mes_i+=1
+					init_shmup()
+		   _upd=update_shmup
+		   _drw=draw_shmup
+	   end)
+	  end
 	 end
 	end
 	trans_t+=1

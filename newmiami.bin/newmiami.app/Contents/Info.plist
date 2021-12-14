@@ -24,5 +24,9 @@
 	<string>newmiami</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>10.6</string>
+	<key>NSHighResolutionCapable</key>
+	<string>YES</string>
+	<key>NSSupportsAutomaticGraphicsSwitching</key>
+	<string>TRUE</string>
 </dict>
 </plist>
